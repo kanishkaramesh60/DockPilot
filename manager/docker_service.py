@@ -154,3 +154,110 @@ def get_system_overview():
         }
     finally:
         client.close()
+
+
+def list_images():
+    """Return actual local Docker images and their metadata."""
+    client = get_docker_client()
+    try:
+        images = client.images.list()
+        results = []
+        for image in images:
+            attrs = image.attrs or {}
+            results.append({
+                "id": image.short_id.replace("sha256:", ""),
+                "full_id": image.id,
+                "tags": image.tags or ["<none>:<none>"],
+                "size_bytes": attrs.get("Size", 0),
+                "created": attrs.get("Created"),
+            })
+        return sorted(results, key=lambda item: (item["tags"][0].lower(), item["id"]))
+    finally:
+        client.close()
+
+
+def pull_image(image_name):
+    """Pull an image from a registry after validating the requested name."""
+    name = (image_name or "").strip()
+    if not name:
+        raise ValueError("Enter an image name, for example nginx:alpine")
+    if len(name) > 255 or any(ch.isspace() for ch in name):
+        raise ValueError("Image name must be under 256 characters and contain no spaces")
+    client = get_docker_client()
+    try:
+        image = client.images.pull(name)
+        attrs = image.attrs or {}
+        return {
+            "id": image.short_id.replace("sha256:", ""),
+            "full_id": image.id,
+            "tags": image.tags or [name],
+            "size_bytes": attrs.get("Size", 0),
+            "created": attrs.get("Created"),
+            "message": f"Image {name} downloaded successfully",
+        }
+    finally:
+        client.close()
+
+
+def create_container(image_name, name=None, host_port=None, container_port=80,
+                     environment=None, restart_policy="no"):
+    """Create and start a real Docker container from a local image."""
+    image_name = (image_name or "").strip()
+    if not image_name:
+        raise ValueError("Choose a Docker image.")
+    if any(ch.isspace() for ch in image_name):
+        raise ValueError("Image name must not contain spaces.")
+    if restart_policy not in {"no", "on-failure", "always", "unless-stopped"}:
+        raise ValueError("Unsupported restart policy.")
+
+    container_name = (name or "").strip() or None
+    if container_name and (len(container_name) > 128 or
+                           any(ch.isspace() for ch in container_name)):
+        raise ValueError("Container name must be 1-128 characters with no spaces.")
+
+    env_values = []
+    for item in (environment or []):
+        item = str(item).strip()
+        if not item:
+            continue
+        if "=" not in item:
+            raise ValueError("Each environment variable must use KEY=VALUE format.")
+        key, value = item.split("=", 1)
+        if not key or not key.replace("_", "").isalnum() or key[0].isdigit():
+            raise ValueError(f"Invalid environment variable name: {key}")
+        env_values.append(f"{key}={value}")
+
+    ports = None
+    if host_port is not None:
+        if container_port is None:
+            raise ValueError("Container port is required when mapping a host port.")
+        ports = {f"{int(container_port)}/tcp": int(host_port)}
+
+    client = get_docker_client()
+    try:
+        try:
+            image = client.images.get(image_name)
+        except NotFound:
+            raise ValueError(
+                f"Image '{image_name}' is not available locally. Pull it in Docker Images first."
+            )
+
+        container = client.containers.run(
+            image=image,
+            name=container_name,
+            detach=True,
+            ports=ports,
+            environment=env_values or None,
+            restart_policy={"Name": restart_policy},
+        )
+        container.reload()
+        return {
+            "id": container.short_id,
+            "full_id": container.id,
+            "name": container.name,
+            "image": image_name,
+            "status": container.status,
+            "message": f"Container '{container.name}' created and started.",
+        }
+    finally:
+        client.close()

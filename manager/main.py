@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
+from pydantic import BaseModel, Field
 from fastapi.responses import FileResponse
 from docker.errors import DockerException, NotFound, APIError
 
@@ -11,7 +12,23 @@ from docker_service import (
     get_container_logs,
     get_container_stats,
     get_system_overview,
+    list_images,
+    pull_image,
+    create_container,
 )
+
+class PullImageRequest(BaseModel):
+    image: str = Field(min_length=1, max_length=255)
+
+
+class CreateContainerRequest(BaseModel):
+    image: str = Field(min_length=1, max_length=255)
+    name: str | None = Field(default=None, max_length=128)
+    host_port: int | None = Field(default=None, ge=1, le=65535)
+    container_port: int | None = Field(default=80, ge=1, le=65535)
+    environment: list[str] = Field(default_factory=list, max_length=50)
+    restart_policy: str = Field(default="no", pattern="^(no|on-failure|always|unless-stopped)$")
+
 
 app = FastAPI(
     title="DockPilot API",
@@ -91,3 +108,26 @@ def container_action(container_id: str, action: str):
 @app.get("/api/system/overview")
 def system_overview():
     return docker_request(get_system_overview)
+
+
+@app.get("/api/images")
+def images():
+    return docker_request(list_images)
+
+
+@app.post("/api/images/pull")
+def image_pull(request: PullImageRequest):
+    return docker_request(pull_image, request.image)
+
+
+@app.post("/api/containers")
+def container_create(request: CreateContainerRequest):
+    return docker_request(
+        create_container,
+        request.image,
+        request.name,
+        request.host_port,
+        request.container_port,
+        request.environment,
+        request.restart_policy,
+    )
