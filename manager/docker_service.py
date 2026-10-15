@@ -126,3 +126,31 @@ def get_container_stats(container_id):
         }
     finally:
         client.close()
+
+
+def get_system_overview():
+    """Return live Docker Engine and resource inventory information."""
+    client = get_docker_client()
+    try:
+        info = client.info()
+        version = client.version()
+        containers = client.containers.list(all=True)
+        images = client.images.list()
+        networks = client.networks.list()
+        volumes = client.volumes.list()
+
+        running = sum(1 for item in containers if item.status == "running")
+        return {
+            "engine_version": version.get("Version", "Unknown"),
+            "api_version": version.get("ApiVersion", "Unknown"),
+            "operating_system": info.get("OperatingSystem", "Unknown"),
+            "architecture": info.get("Architecture", "Unknown"),
+            "total_containers": len(containers),
+            "running_containers": running,
+            "stopped_containers": len(containers) - running,
+            "images": len(images),
+            "networks": len(networks),
+            "volumes": len(volumes),
+        }
+    finally:
+        client.close()

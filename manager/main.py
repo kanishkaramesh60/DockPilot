@@ -10,6 +10,7 @@ from docker_service import (
     perform_action,
     get_container_logs,
     get_container_stats,
+    get_system_overview,
 )
 
 app = FastAPI(
@@ -85,3 +86,8 @@ def container_action(container_id: str, action: str):
             detail="Action must be start, stop, or restart",
         )
     return docker_request(perform_action, container_id, action)
+
+
+@app.get("/api/system/overview")
+def system_overview():
+    return docker_request(get_system_overview)
