@@ -432,6 +432,42 @@ tr:last-child td { border-bottom: 0; }
         </form>
     </section>
 
+
+<section class="panel" id="composePanel">
+  <div class="panel-head"><div><h2>Docker Compose Projects</h2><div class="subtitle">Validate a Compose YAML file and optionally start its project. Deployment can create or update Docker resources.</div></div><button onclick="loadComposeProjects()">↻ Refresh projects</button></div>
+  <div style="padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+    <div><label for="composeProjectName" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Project name *</label><input id="composeProjectName" value="dockpilot-demo" maxlength="63" pattern="[a-z0-9][a-z0-9_-]*" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;"></div>
+    <div style="grid-column:1/-1;"><label for="composeYaml" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Compose YAML *</label><textarea id="composeYaml" rows="10" spellcheck="false" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;font-family:Consolas,monospace;resize:vertical;">services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "8090:80"
+</textarea><div class="subtitle">Example uses host port 8090. Ensure the port is free before deploying.</div></div>
+    <div style="grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button type="button" onclick="validateCompose()">Validate YAML</button><button type="button" class="primary" onclick="deployCompose()">Validate and deploy</button><span id="composeMessage" class="message" aria-live="polite">Validation does not change Docker resources.</span></div>
+  </div>
+  <div class="panel-head"><div><h2 style="font-size:15px;">Detected Compose Projects</h2><div class="subtitle">Based on Docker Compose labels on actual containers</div></div></div>
+  <div id="composeProjectsMessage" class="message" style="padding:10px 20px;">Loading Compose projects...</div>
+  <div id="composeProjectsList" style="padding:0 20px 18px;"></div>
+</section>
+
+<section class="panel" id="networksPanel">
+        <div class="panel-head">
+            <div><h2>Docker Networks</h2><div class="subtitle">Read-only inventory of networks and connected containers</div></div>
+            <button onclick="loadNetworks()">↻ Refresh networks</button>
+        </div>
+        <div id="networkMessage" class="message" style="padding:10px 20px;" aria-live="polite">Loading networks...</div>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Driver</th><th>Scope</th><th>Connected containers</th><th>Internal</th></tr></thead><tbody id="networkRows"><tr><td colspan="5" class="message">Loading real Docker networks...</td></tr></tbody></table></div>
+    </section>
+
+    <section class="panel" id="volumesPanel">
+        <div class="panel-head">
+            <div><h2>Docker Volumes</h2><div class="subtitle">Read-only inventory of persistent Docker storage; no volumes are changed or deleted</div></div>
+            <button onclick="loadVolumes()">↻ Refresh volumes</button>
+        </div>
+        <div id="volumeMessage" class="message" style="padding:10px 20px;" aria-live="polite">Loading volumes...</div>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Driver</th><th>Scope</th><th>Created</th><th>Mountpoint</th></tr></thead><tbody id="volumeRows"><tr><td colspan="5" class="message">Loading real Docker volumes...</td></tr></tbody></table></div>
+    </section>
+
 <section class="panel">
 
         <div class="panel-head">
@@ -1237,13 +1273,87 @@ async function createContainerFromDashboard(event) {
 }
 
 
+async function loadNetworks() {
+    const message = document.getElementById("networkMessage");
+    const rows = document.getElementById("networkRows");
+    message.textContent = "Loading Docker networks...";
+    try {
+        const data = await api("/api/networks");
+        rows.innerHTML = data.length ? data.map(n => `<tr>
+            <td><div class="name">${escapeHtml(n.name)}</div><div class="image">${escapeHtml(n.id)}</div></td>
+            <td>${escapeHtml(n.driver)}</td><td>${escapeHtml(n.scope)}</td>
+            <td>${Number(n.container_count)}${n.containers && n.containers.length ? `<div class="image">${n.containers.map(escapeHtml).join(", ")}</div>` : ""}</td>
+            <td>${n.internal ? "Yes" : "No"}</td></tr>`).join("") : '<tr><td colspan="5" class="message">No Docker networks found.</td></tr>';
+        message.textContent = `${data.length} real Docker network(s) loaded. Read-only view.`;
+    } catch (error) {
+        message.textContent = `Could not load networks: ${error.message}`;
+        rows.innerHTML = '<tr><td colspan="5" class="message">Network inventory unavailable.</td></tr>';
+    }
+}
+
+async function loadVolumes() {
+    const message = document.getElementById("volumeMessage");
+    const rows = document.getElementById("volumeRows");
+    message.textContent = "Loading Docker volumes...";
+    try {
+        const data = await api("/api/volumes");
+        rows.innerHTML = data.length ? data.map(v => `<tr>
+            <td><div class="name">${escapeHtml(v.name)}</div></td>
+            <td>${escapeHtml(v.driver)}</td><td>${escapeHtml(v.scope)}</td>
+            <td>${escapeHtml(v.created || "Unknown")}</td><td style="max-width:360px;overflow-wrap:anywhere;">${escapeHtml(v.mountpoint || "Not reported")}</td></tr>`).join("") : '<tr><td colspan="5" class="message">No Docker volumes found.</td></tr>';
+        message.textContent = `${data.length} real Docker volume(s) loaded. Read-only view; no storage was modified.`;
+    } catch (error) {
+        message.textContent = `Could not load volumes: ${error.message}`;
+        rows.innerHTML = '<tr><td colspan="5" class="message">Volume inventory unavailable.</td></tr>';
+    }
+}
+
+
+
+async function validateCompose() {
+  const message = document.getElementById("composeMessage");
+  message.textContent = "Validating with Docker Compose...";
+  try {
+    const result = await api("/api/compose/validate", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({project_name:document.getElementById("composeProjectName").value.trim(), compose_yaml:document.getElementById("composeYaml").value, confirm:false})});
+    message.textContent = result.message || "Compose file is valid.";
+    return true;
+  } catch (error) { message.textContent = `Validation failed: ${error.message}`; return false; }
+}
+async function deployCompose() {
+  const project = document.getElementById("composeProjectName").value.trim();
+  if (!project) { document.getElementById("composeMessage").textContent = "Enter a project name."; return; }
+  if (!confirm(`Deploy Compose project '${project}'? This can create or update Docker resources belonging to this project. Existing unrelated containers are not intentionally targeted. Continue?`)) return;
+  const message = document.getElementById("composeMessage");
+  message.textContent = "Validating and deploying...";
+  try {
+    const result = await api("/api/compose/up", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({project_name:project, compose_yaml:document.getElementById("composeYaml").value, confirm:true})});
+    message.textContent = `${result.output || "Compose project started."} ${result.warning || ""}`;
+    await Promise.all([loadContainers(), loadSystemOverview(), loadComposeProjects(), loadNetworks(), loadVolumes()]);
+  } catch (error) { message.textContent = `Deployment failed: ${error.message}`; }
+}
+async function loadComposeProjects() {
+  const message = document.getElementById("composeProjectsMessage");
+  const list = document.getElementById("composeProjectsList");
+  try {
+    const projects = await api("/api/compose/projects");
+    message.textContent = `${projects.length} Compose project(s) detected.`;
+    list.innerHTML = projects.length ? projects.map(p => `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin:8px 0;"><strong>${escapeHtml(p.name)}</strong><div class="subtitle">${p.running} running · ${p.stopped} stopped</div><div style="margin-top:8px;">${p.containers.map(c => `<div>${escapeHtml(c.name)} — ${escapeHtml(c.service)} — ${escapeHtml(c.status)}</div>`).join("")}</div></div>`).join("") : '<div class="message">No Compose-labelled containers detected yet.</div>';
+  } catch (error) { message.textContent = `Could not load projects: ${error.message}`; list.innerHTML = ""; }
+}
+
+loadComposeProjects();
 loadContainers();
 loadSystemOverview();
 loadImages();
+loadNetworks();
+loadVolumes();
 
+setInterval(loadComposeProjects, 30000);
 setInterval(loadContainers, 10000);
 setInterval(loadSystemOverview, 30000);
 setInterval(loadImages, 30000);
+setInterval(loadNetworks, 30000);
+setInterval(loadVolumes, 30000);
 
 </script>
 

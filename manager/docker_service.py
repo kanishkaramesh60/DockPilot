@@ -261,3 +261,48 @@ def create_container(image_name, name=None, host_port=None, container_port=80,
         }
     finally:
         client.close()
+
+
+def list_networks():
+    """Return real Docker networks without modifying them."""
+    client = get_docker_client()
+    try:
+        results = []
+        for network in client.networks.list():
+            network.reload()
+            attrs = network.attrs or {}
+            containers = attrs.get("Containers") or {}
+            results.append({
+                "id": network.short_id,
+                "name": network.name,
+                "driver": attrs.get("Driver", "unknown"),
+                "scope": attrs.get("Scope", "unknown"),
+                "created": attrs.get("Created"),
+                "internal": bool(attrs.get("Internal", False)),
+                "attachable": bool(attrs.get("Attachable", False)),
+                "container_count": len(containers),
+                "containers": [item.get("Name", item.get("IPv4Address", "unknown")) for item in containers.values()],
+            })
+        return sorted(results, key=lambda item: item["name"].lower())
+    finally:
+        client.close()
+
+
+def list_volumes():
+    """Return real Docker volumes and their mountpoints without changing them."""
+    client = get_docker_client()
+    try:
+        results = []
+        for volume in client.volumes.list():
+            attrs = volume.attrs or {}
+            results.append({
+                "name": volume.name,
+                "driver": attrs.get("Driver", "unknown"),
+                "mountpoint": attrs.get("Mountpoint", ""),
+                "scope": attrs.get("Scope", "unknown"),
+                "created": attrs.get("CreatedAt"),
+                "labels": attrs.get("Labels") or {},
+            })
+        return sorted(results, key=lambda item: item["name"].lower())
+    finally:
+        client.close()
