@@ -155,30 +155,122 @@ class ComposeRequest(BaseModel):
     confirm: bool = False
 
 
-def _compose_command(args, compose_text):
-    """Run Docker Compose against a temporary file; never invokes a shell."""
+COMPOSE_ROOT = Path(__file__).resolve().parent.parent / "compose_projects"
+
+
+def _compose_path(project_name: str) -> Path:
+    # project_name is constrained by Pydantic to lowercase letters, digits, _ and -.
+    return COMPOSE_ROOT / project_name / "compose.yaml"
+
+
+def _run_compose(project_name: str, args, compose_text: str | None = None):
+    """Run Compose with a persistent, project-specific YAML file; never invokes a shell."""
     if not shutil.which("docker"):
         raise HTTPException(status_code=503, detail="Docker CLI was not found. Ensure Docker Desktop is installed and available in PATH.")
-    with tempfile.TemporaryDirectory(prefix="dockpilot-compose-") as temp_dir:
-        compose_file = Path(temp_dir) / "compose.yaml"
+    compose_file = _compose_path(project_name)
+    if compose_text is not None:
+        compose_file.parent.mkdir(parents=True, exist_ok=True)
         compose_file.write_text(compose_text, encoding="utf-8")
-        command = ["docker", "compose", "-f", str(compose_file)] + args
+    if not compose_file.is_file():
+        raise HTTPException(status_code=404, detail=f"No saved Compose file exists for '{project_name}'. Save or deploy its YAML first.")
+    command = ["docker", "compose", "-f", str(compose_file), "-p", project_name] + args
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=180, check=False)
+    except subprocess.TimeoutExpired as exc:
+        raise HTTPException(status_code=504, detail="Docker Compose timed out after 180 seconds.") from exc
+    if result.returncode != 0:
+        message = (result.stderr or result.stdout or "Docker Compose failed.").strip()
+        raise HTTPException(status_code=400, detail=message[-5000:])
+    return result.stdout.strip()
+
+
+def _saved_compose_projects():
+    COMPOSE_ROOT.mkdir(parents=True, exist_ok=True)
+    projects = []
+    for folder in sorted(COMPOSE_ROOT.iterdir()):
+        compose_file = folder / "compose.yaml"
+        if folder.is_dir() and re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", folder.name) and compose_file.is_file():
+            projects.append({"name": folder.name, "config_file": str(compose_file), "saved": True})
+    return projects
+
+
+@app.get("/api/compose/saved")
+def compose_saved():
+    """List saved persistent Compose configurations, whether or not containers are running."""
+    return _saved_compose_projects()
+
+
+@app.post("/api/compose/save")
+def compose_save(request: ComposeRequest):
+    """Validate and persist a Compose YAML file without creating or changing containers."""
+    compose_validate(request)
+    compose_file = _compose_path(request.project_name)
+    compose_file.parent.mkdir(parents=True, exist_ok=True)
+    compose_file.write_text(request.compose_yaml, encoding="utf-8")
+    return {"success": True, "project_name": request.project_name,
+            "config_file": str(compose_file),
+            "message": "Compose YAML validated and saved persistently. No containers were created or changed."}
+
+
+@app.post("/api/compose/validate")
+def compose_validate(request: ComposeRequest):
+    """Validate YAML in a temporary file; does not create or change containers."""
+    if not shutil.which("docker"):
+        raise HTTPException(status_code=503, detail="Docker CLI was not found. Ensure Docker Desktop is installed and available in PATH.")
+    with tempfile.TemporaryDirectory(prefix="dockpilot-compose-validate-") as temp_dir:
+        compose_file = Path(temp_dir) / "compose.yaml"
+        compose_file.write_text(request.compose_yaml, encoding="utf-8")
+        command = ["docker", "compose", "-f", str(compose_file), "-p", request.project_name, "config", "--quiet"]
         try:
             result = subprocess.run(command, capture_output=True, text=True, timeout=180, check=False)
         except subprocess.TimeoutExpired as exc:
-            raise HTTPException(status_code=504, detail="Docker Compose timed out after 180 seconds.") from exc
+            raise HTTPException(status_code=504, detail="Docker Compose validation timed out after 180 seconds.") from exc
         if result.returncode != 0:
-            message = (result.stderr or result.stdout or "Docker Compose failed.").strip()
+            message = (result.stderr or result.stdout or "Docker Compose validation failed.").strip()
             raise HTTPException(status_code=400, detail=message[-5000:])
-        return result.stdout.strip()
+    return {"valid": True, "project_name": request.project_name, "message": "Compose file is valid. No containers were created or changed."}
+
+
+@app.post("/api/compose/up")
+def compose_up(request: ComposeRequest):
+    """Persist validated YAML and start/update the named Compose project after explicit confirmation."""
+    if not request.confirm:
+        raise HTTPException(status_code=400, detail="Explicit confirmation is required before deploying a Compose project.")
+    # Validate in a temp file before saving, so invalid YAML cannot overwrite a working saved file.
+    compose_validate(request)
+    output = _run_compose(request.project_name, ["up", "-d"], request.compose_yaml)
+    return {"success": True, "project_name": request.project_name, "output": output or "Compose project started.",
+            "config_file": str(_compose_path(request.project_name)),
+            "warning": "Compose YAML was saved persistently. Deploying may create or update resources belonging to this project."}
+
+
+@app.post("/api/compose/{project_name}/start")
+def compose_start_saved(project_name: str, confirm: bool = False):
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", project_name):
+        raise HTTPException(status_code=400, detail="Invalid Compose project name.")
+    if not confirm:
+        raise HTTPException(status_code=400, detail="Explicit confirmation is required before starting a project.")
+    output = _run_compose(project_name, ["up", "-d"])
+    return {"success": True, "project_name": project_name, "output": output or "Compose project started."}
+
+
+@app.post("/api/compose/{project_name}/stop")
+def compose_stop_saved(project_name: str, confirm: bool = False):
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", project_name):
+        raise HTTPException(status_code=400, detail="Invalid Compose project name.")
+    if not confirm:
+        raise HTTPException(status_code=400, detail="Explicit confirmation is required before stopping a project.")
+    # `stop` preserves containers, networks, and volumes; it does not remove resources.
+    output = _run_compose(project_name, ["stop"])
+    return {"success": True, "project_name": project_name, "output": output or "Compose project stopped.",
+            "note": "Containers are stopped but not removed. Networks and volumes are preserved."}
 
 
 @app.get("/api/compose/projects")
 def compose_projects():
-    """List Compose projects represented by real Docker container labels."""
-    containers = docker_request(list_containers)
-    client = None
+    """List Compose projects detected from real Docker container labels."""
     from docker_service import get_docker_client
+    client = None
     try:
         client = get_docker_client()
         projects = {}
@@ -188,7 +280,9 @@ def compose_projects():
             if not project:
                 continue
             entry = projects.setdefault(project, {"name": project, "containers": [], "running": 0, "stopped": 0})
-            entry["containers"].append({"name": container.name, "id": container.short_id, "status": container.status, "service": labels.get("com.docker.compose.service", "unknown")})
+            entry["containers"].append({"name": container.name, "id": container.short_id,
+                                         "status": container.status,
+                                         "service": labels.get("com.docker.compose.service", "unknown")})
             if container.status == "running":
                 entry["running"] += 1
             else:
@@ -197,21 +291,3 @@ def compose_projects():
     finally:
         if client is not None:
             client.close()
-
-
-@app.post("/api/compose/validate")
-def compose_validate(request: ComposeRequest):
-    """Validate YAML using Docker Compose without creating or changing containers."""
-    output = _compose_command(["-p", request.project_name, "config", "--quiet"], request.compose_yaml)
-    return {"valid": True, "project_name": request.project_name, "message": "Compose file is valid. No containers were created or changed."}
-
-
-@app.post("/api/compose/up")
-def compose_up(request: ComposeRequest):
-    """Start a Compose project only after explicit confirmation."""
-    if not request.confirm:
-        raise HTTPException(status_code=400, detail="Explicit confirmation is required before deploying a Compose project.")
-    # Validate first, then deploy. Compose may create/start/replace resources for this named project.
-    _compose_command(["-p", request.project_name, "config", "--quiet"], request.compose_yaml)
-    output = _compose_command(["-p", request.project_name, "up", "-d"], request.compose_yaml)
-    return {"success": True, "project_name": request.project_name, "output": output or "Compose project started.", "warning": "Docker Compose may create or update resources belonging to this project."}

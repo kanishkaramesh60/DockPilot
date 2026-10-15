@@ -434,7 +434,7 @@ tr:last-child td { border-bottom: 0; }
 
 
 <section class="panel" id="composePanel">
-  <div class="panel-head"><div><h2>Docker Compose Projects</h2><div class="subtitle">Validate a Compose YAML file and optionally start its project. Deployment can create or update Docker resources.</div></div><button onclick="loadComposeProjects()">↻ Refresh projects</button></div>
+  <div class="panel-head"><div><h2>Docker Compose Projects</h2><div class="subtitle">Save Compose YAML persistently, validate it, and start/stop saved projects. Stop preserves containers, networks, and volumes.</div></div><button onclick="loadComposeProjects()">↻ Refresh projects</button></div>
   <div style="padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
     <div><label for="composeProjectName" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Project name *</label><input id="composeProjectName" value="dockpilot-demo" maxlength="63" pattern="[a-z0-9][a-z0-9_-]*" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;"></div>
     <div style="grid-column:1/-1;"><label for="composeYaml" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Compose YAML *</label><textarea id="composeYaml" rows="10" spellcheck="false" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;font-family:Consolas,monospace;resize:vertical;">services:
@@ -443,11 +443,11 @@ tr:last-child td { border-bottom: 0; }
     ports:
       - "8090:80"
 </textarea><div class="subtitle">Example uses host port 8090. Ensure the port is free before deploying.</div></div>
-    <div style="grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button type="button" onclick="validateCompose()">Validate YAML</button><button type="button" class="primary" onclick="deployCompose()">Validate and deploy</button><span id="composeMessage" class="message" aria-live="polite">Validation does not change Docker resources.</span></div>
+    <div style="grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button type="button" onclick="validateCompose()">Validate YAML</button><button type="button" onclick="saveCompose()">Save YAML</button><button type="button" class="primary" onclick="deployCompose()">Save and deploy</button><span id="composeMessage" class="message" aria-live="polite">Validation does not change Docker resources.</span></div>
   </div>
-  <div class="panel-head"><div><h2 style="font-size:15px;">Detected Compose Projects</h2><div class="subtitle">Based on Docker Compose labels on actual containers</div></div></div>
+  <div class="panel-head"><div><h2 style="font-size:15px;">Detected Compose Projects</h2><div class="subtitle">Based on labels on real containers. Saved configurations remain available even when stopped.</div></div><button onclick="loadSavedComposeProjects()">↻ Refresh saved projects</button></div>
   <div id="composeProjectsMessage" class="message" style="padding:10px 20px;">Loading Compose projects...</div>
-  <div id="composeProjectsList" style="padding:0 20px 18px;"></div>
+  <div id="composeProjectsList" style="padding:0 20px 18px;"></div><div class="panel-head"><div><h2 style="font-size:15px;">Saved Compose Configurations</h2><div class="subtitle">Stored under the DockPilot project directory</div></div></div><div id="savedComposeMessage" class="message" style="padding:10px 20px;">Loading saved configurations...</div><div id="savedComposeList" style="padding:0 20px 18px;"></div>
 </section>
 
 <section class="panel" id="networksPanel">
@@ -1310,26 +1310,59 @@ async function loadVolumes() {
 
 
 
+function composeRequest(confirmValue=false) {
+  return {project_name:document.getElementById("composeProjectName").value.trim(), compose_yaml:document.getElementById("composeYaml").value, confirm:confirmValue};
+}
 async function validateCompose() {
   const message = document.getElementById("composeMessage");
   message.textContent = "Validating with Docker Compose...";
   try {
-    const result = await api("/api/compose/validate", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({project_name:document.getElementById("composeProjectName").value.trim(), compose_yaml:document.getElementById("composeYaml").value, confirm:false})});
+    const result = await api("/api/compose/validate", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(composeRequest(false))});
     message.textContent = result.message || "Compose file is valid.";
     return true;
   } catch (error) { message.textContent = `Validation failed: ${error.message}`; return false; }
 }
+async function saveCompose() {
+  const message = document.getElementById("composeMessage");
+  message.textContent = "Validating and saving YAML...";
+  try {
+    const result = await api("/api/compose/save", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(composeRequest(false))});
+    message.textContent = result.message + " File: " + result.config_file;
+    await loadSavedComposeProjects();
+  } catch (error) { message.textContent = `Save failed: ${error.message}`; }
+}
 async function deployCompose() {
   const project = document.getElementById("composeProjectName").value.trim();
   if (!project) { document.getElementById("composeMessage").textContent = "Enter a project name."; return; }
-  if (!confirm(`Deploy Compose project '${project}'? This can create or update Docker resources belonging to this project. Existing unrelated containers are not intentionally targeted. Continue?`)) return;
+  if (!confirm(`Save and deploy Compose project '${project}'? This may create or update resources belonging to this project. Review the YAML first. Continue?`)) return;
   const message = document.getElementById("composeMessage");
-  message.textContent = "Validating and deploying...";
+  message.textContent = "Validating, saving, and deploying...";
   try {
-    const result = await api("/api/compose/up", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({project_name:project, compose_yaml:document.getElementById("composeYaml").value, confirm:true})});
-    message.textContent = `${result.output || "Compose project started."} ${result.warning || ""}`;
-    await Promise.all([loadContainers(), loadSystemOverview(), loadComposeProjects(), loadNetworks(), loadVolumes()]);
+    const result = await api("/api/compose/up", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(composeRequest(true))});
+    message.textContent = `${result.output || "Compose project started."} ${result.warning || ""} Config: ${result.config_file || "saved"}`;
+    await Promise.all([loadContainers(), loadSystemOverview(), loadComposeProjects(), loadSavedComposeProjects(), loadNetworks(), loadVolumes()]);
   } catch (error) { message.textContent = `Deployment failed: ${error.message}`; }
+}
+async function manageSavedCompose(project, action) {
+  const verb = action === "stop" ? "stop" : "start/deploy";
+  const detail = action === "stop" ? "Containers will stop but will not be removed; networks and volumes are preserved." : "This may create or start resources described in the saved YAML.";
+  if (!confirm(`Confirm ${verb} for Compose project '${project}'? ${detail}`)) return;
+  const message = document.getElementById("savedComposeMessage");
+  message.textContent = `${verb} in progress for ${project}...`;
+  try {
+    const result = await api(`/api/compose/${encodeURIComponent(project)}/${action}?confirm=true`, {method:"POST"});
+    message.textContent = `${result.output || `Project ${action} complete.`} ${result.note || ""}`;
+    await Promise.all([loadComposeProjects(), loadSavedComposeProjects(), loadContainers(), loadSystemOverview()]);
+  } catch (error) { message.textContent = `Could not ${action} project: ${error.message}`; }
+}
+async function loadSavedComposeProjects() {
+  const message = document.getElementById("savedComposeMessage");
+  const list = document.getElementById("savedComposeList");
+  try {
+    const projects = await api("/api/compose/saved");
+    message.textContent = `${projects.length} saved Compose configuration(s). YAML files are stored on disk.`;
+    list.innerHTML = projects.length ? projects.map(p => `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin:8px 0;"><strong>${escapeHtml(p.name)}</strong><div class="subtitle" style="overflow-wrap:anywhere;">${escapeHtml(p.config_file)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button type="button" onclick="manageSavedCompose('${escapeHtml(p.name)}','start')">Start / Deploy</button><button type="button" onclick="manageSavedCompose('${escapeHtml(p.name)}','stop')">Stop (preserve resources)</button></div></div>`).join("") : '<div class="message">No saved Compose YAML files yet. Use Save YAML or Save and deploy above.</div>';
+  } catch (error) { message.textContent = `Could not load saved configurations: ${error.message}`; list.innerHTML = ""; }
 }
 async function loadComposeProjects() {
   const message = document.getElementById("composeProjectsMessage");
@@ -1342,6 +1375,7 @@ async function loadComposeProjects() {
 }
 
 loadComposeProjects();
+loadSavedComposeProjects();
 loadContainers();
 loadSystemOverview();
 loadImages();
