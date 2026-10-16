@@ -37,6 +37,7 @@ from metrics_history import (
     get_metric_history,
     get_scaling_history,
 )
+from container_health import check_containers, get_recent_health_events
 
 # --------------------------------------------------
 # REQUEST MODELS
@@ -80,6 +81,14 @@ app = FastAPI(
 
 COMPOSE_ROOT = Path(__file__).resolve().parent.parent / "compose_projects"
 
+@app.get("/api/health")
+def container_health_status():
+    return check_containers(auto_recover=False)
+
+
+@app.get("/api/health/events")
+def container_health_events(limit: int = 100):
+    return {"items": get_recent_health_events(limit=limit)}
 
 # --------------------------------------------------
 # HOME AND HEALTH

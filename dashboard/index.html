@@ -350,6 +350,7 @@ tr:last-child td { border-bottom: 0; }
 <button class="nav-btn" data-page="security"><span class="nav-icon">◇</span>Security</button>
 <button class="nav-btn" data-page="monitoring"><span class="nav-icon">⌁</span>Monitoring</button>
 <button class="nav-btn" data-page="autoscaling"><span class="nav-icon">↗</span>Autoscaling</button>
+<button class="nav-btn" data-page="health"><span class="nav-icon">♥</span>Health Monitor</button>
 <button class="nav-btn" data-page="history"><span class="nav-icon">◷</span>Event History</button>
 </nav>
 <div class="workspace">
@@ -1706,7 +1707,7 @@ setInterval(refreshDockPilotScaling, 10000);
 
 <script>
 (function(){
- const pageNames={overview:'Overview',containers:'Containers',images:'Images',compose:'Compose Projects',storage:'Networks & Volumes',security:'Security',monitoring:'Monitoring',autoscaling:'Autoscaling',history:'Event History'};
+ const pageNames={overview:'Overview',containers:'Containers',images:'Images',compose:'Compose Projects',storage:'Networks & Volumes',security:'Security',monitoring:'Monitoring',autoscaling:'Autoscaling',health:'Health Monitor',history:'Event History'};
  function setupDockPilotNavigation(){
    const main=document.querySelector('.workspace main'); if(!main || main.dataset.navReady==='1') return;
    main.dataset.navReady='1';
@@ -1737,6 +1738,11 @@ setInterval(refreshDockPilotScaling, 10000);
    // Existing monitoring charts are identified by their chart canvases and moved together with their containing panel.
    const chart=main.querySelector('#cpuChart');
    if(chart){let p=chart.closest('section.panel')||chart.closest('.panel'); if(p && !p.closest('.nav-page')) move(p,'monitoring');}
+   // Build a dedicated Health Monitor page. The previous version had loaders but no matching DOM elements.
+   pages.health.innerHTML='<div class="page-heading"><h1>Health Monitor</h1><div class="subtitle">Live status from the configured Docker Engine</div></div>'+
+     '<section class="cards"><div class="card"><div class="card-label">Containers checked</div><div class="card-number" id="healthCount">—</div></div><div class="card"><div class="card-label">Stopped / Unhealthy</div><div class="card-number" id="healthProblems">—</div></div><div class="card"><div class="card-label">Healthy</div><div class="card-number" id="healthHealthy">—</div></div></section>'+
+     '<section class="panel"><div class="panel-head"><div><h2>Container health status</h2><div class="subtitle">Health checks and recovery are read-only here; automatic recovery remains off.</div></div><button type="button" id="refreshContainerHealthBtn">↻ Refresh health</button></div><div id="containerHealthMessage" class="message">Loading container health…</div><div class="table-wrap"><table><thead><tr><th>Container</th><th>Image</th><th>Docker state</th><th>Health</th><th>Reason</th><th>Recovery</th></tr></thead><tbody id="containerHealthRows"></tbody></table></div></section>'+
+     '<section class="panel"><div class="panel-head"><div><h2>Recent health events</h2><div class="subtitle">Stopped/unhealthy alerts and recovery attempts</div></div><button type="button" id="refreshHealthEventsBtn">↻ Refresh events</button></div><div id="healthEventsMessage" class="message">Loading health events…</div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Container</th><th>Event</th><th>Status / Recovery</th><th>Reason</th></tr></thead><tbody id="healthEventRows"></tbody></table></div></section>' ;
    // Event history page uses persisted history APIs if they are available.
    pages.history.innerHTML='<div class="page-heading"><h1>Event History</h1><div class="subtitle">Persisted autoscaling decisions and outcomes</div></div><section class="panel"><div class="panel-head"><div><h2>Scaling events</h2><div class="subtitle">Latest recorded scaling actions</div></div><button type="button" id="refreshHistoryBtn">↻ Refresh history</button></div><div id="historyMessage" class="message" style="padding:12px 20px">Loading event history…</div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Project / Service</th><th>Action</th><th>Replicas</th><th>Result</th><th>Reason</th></tr></thead><tbody id="historyRows"></tbody></table></div></section>';
    // Historical metrics panel: loads persisted samples from the SQLite history API.
@@ -1747,10 +1753,36 @@ setInterval(refreshDockPilotScaling, 10000);
      document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b===btn));
      Object.values(pages).forEach(p=>p.classList.toggle('active',p.dataset.pageContent===btn.dataset.page));
      if(btn.dataset.page==='history') loadDockPilotHistory();
+     if(btn.dataset.page==='health'){loadDockPilotHealth();loadDockPilotHealthEvents();}
    }));
+   const refreshHealth=document.getElementById('refreshContainerHealthBtn'); if(refreshHealth) refreshHealth.addEventListener('click',loadDockPilotHealth);
+   const refreshHealthEvents=document.getElementById('refreshHealthEventsBtn'); if(refreshHealthEvents) refreshHealthEvents.addEventListener('click',loadDockPilotHealthEvents);
    const refresh=document.getElementById('refreshHistoryBtn'); if(refresh) refresh.addEventListener('click',loadDockPilotHistory);
    const refreshMetrics=document.getElementById('refreshMetricsHistoryBtn'); if(refreshMetrics) refreshMetrics.addEventListener('click',loadDockPilotMetrics);
    document.querySelectorAll('.nav-btn').forEach(btn=>{if(btn.dataset.page==='monitoring')btn.addEventListener('click',loadDockPilotMetrics)});
+ }
+ async function loadDockPilotHealth(){
+   const msg=document.getElementById('containerHealthMessage'),body=document.getElementById('containerHealthRows');if(!msg||!body)return;
+   msg.textContent='Loading container health…';
+   try{
+     const r=await fetch('/api/health');if(!r.ok)throw new Error('Health API returned '+r.status);
+     const data=await r.json(),items=data.containers||[];body.innerHTML='';
+     const count=(status)=>items.filter(x=>x.status===status).length;
+     document.getElementById('healthCount').textContent=String(data.container_count??items.length);
+     document.getElementById('healthProblems').textContent=String(data.problem_count??count('stopped')+count('unhealthy'));
+     document.getElementById('healthHealthy').textContent=String(count('healthy'));
+     document.getElementById('healthNoCheck').textContent=String(count('running_no_healthcheck'));
+     items.forEach(item=>{const tr=document.createElement('tr');const vals=[item.name||item.id||'—',item.image||'—',item.state||'—',item.status||item.health||'—',item.reason||'—',item.recovery||'not attempted'];vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=String(v);if(i===3){td.style.fontWeight='700';td.style.color=['stopped','unhealthy'].includes(String(v))?'#dc2626':['healthy'].includes(String(v))?'#059669':'#b45309'}tr.appendChild(td)});body.appendChild(tr)});
+     msg.textContent='Last checked: '+(data.checked_at||'unknown')+'. Auto-recovery is '+(data.auto_recovery_enabled?'enabled':'disabled')+'.';
+   }catch(err){msg.textContent='Could not load container health. Confirm /api/health is available in manager/main.py.';}
+ }
+ async function loadDockPilotHealthEvents(){
+   const msg=document.getElementById('healthEventsMessage'),body=document.getElementById('healthEventRows');if(!msg||!body)return;
+   msg.textContent='Loading health events…';
+   try{const r=await fetch('/api/health/events?limit=100');if(!r.ok)throw new Error('Health events API returned '+r.status);const data=await r.json(),items=data.items||[];body.innerHTML='';
+     if(!items.length){msg.textContent='No health events recorded yet.';return;}
+     items.forEach(e=>{const tr=document.createElement('tr');[e.timestamp||'—',e.container_name||e.container_id||'—',e.type||'—',e.status||e.recovery||'—',e.reason||'—'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.appendChild(td)});body.appendChild(tr)});msg.textContent='Showing '+items.length+' recent health event(s).';
+   }catch(err){msg.textContent='Could not load health events. Confirm /api/health/events is available in manager/main.py.';}
  }
  async function loadDockPilotMetrics(){
    const msg=document.getElementById('metricsHistoryMessage'),canvas=document.getElementById('dockpilotMetricsHistoryChart'); if(!msg||!canvas)return;
