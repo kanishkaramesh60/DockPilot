@@ -1,5 +1,7 @@
 
 """DockPilot automatic scaling controller."""
+
+import re
 import subprocess
 import threading
 import time
@@ -9,7 +11,14 @@ import yaml
 
 from autoscaler import ScalingConfig, ScalingDecisionEngine
 from autoscaling_service import get_service_metrics
+from metrics_history import (
+    initialize_history,
+    record_metrics,
+    record_scaling_event,
+)
 
+
+initialize_history()
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 COMPOSE_ROOT = PROJECT_ROOT / "compose_projects"
@@ -52,7 +61,6 @@ class AutoscalingController:
 
         service = services[service_name]
 
-        # Fixed host ports and fixed container names prevent safe scaling.
         if service.get("container_name"):
             raise ValueError(
                 "Scaling is blocked: remove container_name from this service."
@@ -67,20 +75,25 @@ class AutoscalingController:
         return path
 
     def enable(self, project_name, service_name):
-        # Only accept the same safe naming convention as DockPilot's API.
-        import re
-
         pattern = r"[a-z0-9][a-z0-9_-]{0,62}"
-        if not re.fullmatch(pattern, project_name):
+
+        if not isinstance(project_name, str) or not re.fullmatch(
+            pattern, project_name
+        ):
             raise ValueError("Invalid Compose project name.")
-        if not re.fullmatch(pattern, service_name):
+
+        if not isinstance(service_name, str) or not re.fullmatch(
+            pattern, service_name
+        ):
             raise ValueError("Invalid Compose service name.")
 
         self._load_safe_service(project_name, service_name)
 
         with self.lock:
             if self.worker and self.worker.is_alive():
-                raise ValueError("Stop the current autoscaling session first.")
+                raise ValueError(
+                    "Stop the current autoscaling session first."
+                )
 
             self.stop_event = threading.Event()
             self.engine = ScalingDecisionEngine(self.config)
@@ -113,9 +126,15 @@ class AutoscalingController:
             worker.join(timeout=3)
 
         with self.lock:
-            self.status = "Disabled"
+            self.status = (
+                "Disabled"
+                if not worker or not worker.is_alive()
+                else "Stopping"
+            )
 
-        self._record("Automatic scaling disabled. Existing replicas were unchanged.")
+        self._record(
+            "Automatic scaling disabled. Existing replicas were unchanged."
+        )
         return self.get_status()
 
     def _run(self):
@@ -124,47 +143,97 @@ class AutoscalingController:
                 project = self.project_name
                 service = self.service_name
 
-                metrics = get_service_metrics(project, service)
+                metrics = get_service_metrics(project, service) or {}
                 cpu = metrics.get("average_cpu_percent")
-                replicas = metrics.get("running_replicas", 0)
+                memory = metrics.get(
+                    "average_memory_percent",
+                    metrics.get("memory_percent"),
+                )
+                replicas = int(metrics.get("running_replicas", 0))
+
+                # Persist every monitoring sample.
+                record_metrics(
+                    project_name=project,
+                    service_name=service,
+                    cpu_percent=float(cpu) if cpu is not None else None,
+                    memory_percent=(
+                        float(memory) if memory is not None else None
+                    ),
+                    running_replicas=replicas,
+                )
 
                 with self.lock:
                     self.last_metrics = metrics
                     self.last_error = None
 
-                # Do not make a decision without a valid CPU measurement.
+                # A valid CPU sample and at least one running replica
+                # are required before the engine can make a decision.
                 if cpu is not None and replicas > 0:
                     decision = self.engine.evaluate(
                         cpu_percent=float(cpu),
-                        replicas=int(replicas),
+                        replicas=replicas,
                     )
 
                     action = decision.get("action")
 
                     if action in ("scale_up", "scale_down"):
                         target = int(decision["replicas"])
-
-                        # Re-check the Compose configuration immediately
-                        # before changing replica count.
-                        compose_file = self._load_safe_service(project, service)
-
-                        result = subprocess.run(
-                            [
-                                "docker", "compose",
-                                "-p", project,
-                                "-f", str(compose_file),
-                                "up", "-d",
-                                "--scale", f"{service}={target}",
-                            ],
-                            capture_output=True,
-                            text=True,
-                            timeout=180,
-                            check=False,
+                        compose_file = self._load_safe_service(
+                            project, service
                         )
 
-                        if result.returncode != 0:
+                        success = False
+                        error_message = None
+
+                        try:
+                            result = subprocess.run(
+                                [
+                                    "docker", "compose",
+                                    "-p", project,
+                                    "-f", str(compose_file),
+                                    "up", "-d",
+                                    "--scale", f"{service}={target}",
+                                ],
+                                capture_output=True,
+                                text=True,
+                                timeout=180,
+                                check=False,
+                            )
+
+                            if result.returncode != 0:
+                                error_message = (
+                                    result.stderr.strip()
+                                    or result.stdout.strip()
+                                    or "Docker Compose scaling failed."
+                                )
+                            else:
+                                success = True
+
+                        except subprocess.TimeoutExpired:
+                            error_message = (
+                                "Docker Compose scaling timed out."
+                            )
+
+                        except OSError as exc:
+                            error_message = (
+                                f"Could not execute Docker Compose: {exc}"
+                            )
+
+                        # Record both successful and failed attempts.
+                        record_scaling_event(
+                            project_name=project,
+                            service_name=service,
+                            action=action,
+                            previous_replicas=replicas,
+                            target_replicas=target,
+                            reason=decision.get("reason", ""),
+                            success=success,
+                            error=error_message,
+                        )
+
+                        if not success:
                             raise RuntimeError(
-                                result.stderr.strip()
+                                error_message
                                 or "Docker Compose scaling failed."
                             )
 
@@ -177,6 +246,7 @@ class AutoscalingController:
             except Exception as exc:
                 with self.lock:
                     self.last_error = str(exc)
+
                 self._record(f"Autoscaling error: {exc}")
 
             self.stop_event.wait(self.config.sample_seconds)

@@ -32,6 +32,11 @@ from docker_service import (
     list_volumes,
 )
 
+from metrics_history import (
+    initialize_history,
+    get_metric_history,
+    get_scaling_history,
+)
 
 # --------------------------------------------------
 # REQUEST MODELS
@@ -765,3 +770,34 @@ def compose_projects():
     finally:
         if client is not None:
             client.close()
+
+# Initialize persistent metrics and scaling history.
+initialize_history()
+
+
+@app.get("/api/autoscaling/history/metrics")
+def autoscaling_metric_history(
+    project_name: str = "dockpilot-scaled-demo",
+    service_name: str = "web",
+    limit: int = 100,
+):
+    return {
+        "items": get_metric_history(
+            project_name,
+            service_name,
+            limit,
+        )
+    }
+
+
+@app.get("/api/autoscaling/history/events")
+def autoscaling_event_history(
+    project_name: str | None = None,
+    limit: int = 100,
+):
+    return {
+        "items": get_scaling_history(
+            project_name=project_name,
+            limit=limit,
+        )
+    }
