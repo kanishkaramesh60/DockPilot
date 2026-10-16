@@ -303,6 +303,19 @@ tr:last-child td { border-bottom: 0; }
 .security-recommendation { margin-top: 8px; font-size: 13px; color: #cbd5e1; overflow-wrap: anywhere; }
 .security-empty { color: var(--muted); font-size: 13px; }
 
+
+/* Automatic scaling panel: align with the existing dashboard panels */
+#autoscaling-panel { margin-top: 0; }
+.autoscaling-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding: 18px 20px; }
+.autoscaling-metric { background: #0d1728; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.autoscaling-metric-label { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+.autoscaling-metric-value { font-size: 21px; font-weight: 700; overflow-wrap: anywhere; }
+.autoscaling-actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 20px 16px; }
+#as-message { margin: 0 20px 12px; overflow-wrap: anywhere; }
+#as-events { margin: 0 20px 20px; padding-left: 22px; color: var(--muted); font-size: 13px; }
+#as-events li { margin: 8px 0; overflow-wrap: anywhere; }
+@media(max-width:700px) { .autoscaling-metrics { grid-template-columns: 1fr; } }
+
 </style>
 
 </head>
@@ -570,6 +583,25 @@ tr:last-child td { border-bottom: 0; }
     </section>
 
 
+
+<section class="panel" id="autoscaling-panel">
+  <div class="panel-head">
+    <div><h2>Automatic Scaling</h2><div class="subtitle">Monitor and control scaling for dockpilot-scaled-demo / web</div></div>
+    <button type="button" onclick="refreshDockPilotScaling()">↻ Refresh</button>
+  </div>
+  <div class="autoscaling-metrics">
+    <div class="autoscaling-metric"><div class="autoscaling-metric-label">Controller Status</div><div class="autoscaling-metric-value" id="as-status">Loading...</div></div>
+    <div class="autoscaling-metric"><div class="autoscaling-metric-label">Running Replicas</div><div class="autoscaling-metric-value" id="as-replicas">—</div></div>
+    <div class="autoscaling-metric"><div class="autoscaling-metric-label">Average CPU</div><div class="autoscaling-metric-value" id="as-cpu">—</div></div>
+  </div>
+  <div class="autoscaling-actions">
+    <button type="button" class="primary" onclick="enableDockPilotScaling()">Enable Autoscaling</button>
+    <button type="button" onclick="disableDockPilotScaling()">Disable Autoscaling</button>
+  </div>
+  <p id="as-message" role="status" aria-live="polite"></p>
+  <div class="panel-head"><h2>Recent Scaling Events</h2></div>
+  <ul id="as-events"><li>Loading events...</li></ul>
+</section>
 
     <div class="footer">
 
@@ -1548,6 +1580,77 @@ setInterval(loadImages, 30000);
 setInterval(loadNetworks, 30000);
 setInterval(loadVolumes, 30000);
 
+</script>
+
+<script>
+async function refreshDockPilotScaling() {
+  const message = document.getElementById("as-message");
+
+  try {
+    const [s, m] = await Promise.all([
+      fetch("/api/autoscaling/status"),
+      fetch("/api/autoscaling/metrics?project_name=dockpilot-scaled-demo&service_name=web")
+    ]);
+
+    if (!s.ok || !m.ok) throw new Error("Autoscaling API request failed.");
+
+    const status = await s.json();
+    const metrics = await m.json();
+
+    document.getElementById("as-status").textContent =
+      status.status || (status.enabled ? "Enabled" : "Disabled");
+    document.getElementById("as-replicas").textContent =
+      metrics.running_replicas ?? "--";
+    document.getElementById("as-cpu").textContent =
+      metrics.average_cpu_percent == null
+        ? "Waiting for CPU metrics"
+        : Number(metrics.average_cpu_percent).toFixed(2) + "%";
+
+    const list = document.getElementById("as-events");
+    list.replaceChildren();
+
+    (status.events || []).slice(0, 10).forEach(event => {
+      const li = document.createElement("li");
+      li.textContent = `${event.timestamp || ""} ${event.message || ""}`;
+      list.appendChild(li);
+    });
+
+    if (!list.children.length) {
+      list.textContent = "No scaling events yet.";
+    }
+
+    message.textContent = status.last_error
+      ? "Controller error: " + status.last_error : "";
+  } catch (error) {
+    message.textContent = error.message;
+  }
+}
+
+async function enableDockPilotScaling() {
+  await sendScalingRequest(
+    "/api/autoscaling/enable?project_name=dockpilot-scaled-demo&service_name=web"
+  );
+}
+
+async function disableDockPilotScaling() {
+  await sendScalingRequest("/api/autoscaling/disable");
+}
+
+async function sendScalingRequest(url) {
+  const message = document.getElementById("as-message");
+  try {
+    const response = await fetch(url, { method: "POST" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "Request failed.");
+    message.textContent = "Request completed.";
+    await refreshDockPilotScaling();
+  } catch (error) {
+    message.textContent = error.message;
+  }
+}
+
+refreshDockPilotScaling();
+setInterval(refreshDockPilotScaling, 10000);
 </script>
 
 </body>

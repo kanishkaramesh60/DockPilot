@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from docker.errors import DockerException, NotFound, APIError
 
 from autoscaling_service import get_service_metrics
+from autoscaling_controller import autoscaling_controller
 
 from compose_security import (
     ComposeSecurityError,
@@ -687,6 +688,22 @@ def autoscaling_metrics(project_name: str, service_name: str):
             raise HTTPException(status_code=503, detail=f"Docker Engine error: {exc}") from exc
         raise
 
+@app.get("/api/autoscaling/status")
+def autoscaling_status():
+    return autoscaling_controller.get_status()
+
+
+@app.post("/api/autoscaling/enable")
+def enable_autoscaling(project_name: str, service_name: str):
+    try:
+        return autoscaling_controller.enable(project_name, service_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/autoscaling/disable")
+def disable_autoscaling():
+    return autoscaling_controller.disable()
 
 # --------------------------------------------------
 # DETECT REAL COMPOSE PROJECTS
