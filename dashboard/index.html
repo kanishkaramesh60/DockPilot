@@ -275,6 +275,34 @@ tr:last-child td { border-bottom: 0; }
 
 }
 
+
+/* Phase 9: Compose security results */
+.security-results {
+    margin: 0 20px 18px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #0d1728;
+}
+.security-results h3 { margin: 0 0 10px; font-size: 15px; }
+.security-summary {
+    padding: 10px 12px; border-radius: 8px; margin-bottom: 12px;
+    font-size: 13px; overflow-wrap: anywhere;
+}
+.security-summary.safe { background: #064e3b; color: #a7f3d0; }
+.security-summary.blocked { background: #4c1d2b; color: #fecdd3; }
+.security-summary.warning { background: #513e12; color: #fde68a; }
+.security-summary.neutral { background: #1b2a42; color: var(--text); }
+.security-findings { display: grid; gap: 10px; }
+.security-finding {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; overflow-wrap: anywhere;
+}
+.security-finding-title { font-weight: 650; margin-bottom: 6px; }
+.security-meta { color: var(--muted); font-size: 12px; margin-top: 5px; }
+.security-recommendation { margin-top: 8px; font-size: 13px; color: #cbd5e1; overflow-wrap: anywhere; }
+.security-empty { color: var(--muted); font-size: 13px; }
+
 </style>
 
 </head>
@@ -444,6 +472,11 @@ tr:last-child td { border-bottom: 0; }
       - "8090:80"
 </textarea><div class="subtitle">Example uses host port 8090. Ensure the port is free before deploying.</div></div>
     <div style="grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button type="button" onclick="validateCompose()">Validate YAML</button><button type="button" onclick="saveCompose()">Save YAML</button><button type="button" class="primary" onclick="deployCompose()">Save and deploy</button><span id="composeMessage" class="message" aria-live="polite">Validation does not change Docker resources.</span></div>
+  </div>
+  <div id="composeSecurityResults" class="security-results" hidden aria-live="polite">
+    <h3>Compose Security Analysis</h3>
+    <div id="composeSecuritySummary" class="security-summary neutral">No security analysis has been run yet.</div>
+    <div id="composeSecurityFindings" class="security-findings"></div>
   </div>
   <div class="panel-head"><div><h2 style="font-size:15px;">Detected Compose Projects</h2><div class="subtitle">Based on labels on real containers. Saved configurations remain available even when stopped.</div></div><button onclick="loadSavedComposeProjects()">↻ Refresh saved projects</button></div>
   <div id="composeProjectsMessage" class="message" style="padding:10px 20px;">Loading Compose projects...</div>
@@ -616,15 +649,19 @@ async function api(url, options = {}) {
 
 
     if (!response.ok) {
-
         const detail = data && data.detail
-
             ? data.detail
-
             : (typeof data === "string" ? data : response.statusText);
-
-        throw new Error(detail || `HTTP ${response.status}`);
-
+        const error = new Error(
+            typeof detail === "string"
+                ? detail
+                : (detail?.message || `HTTP ${response.status}`)
+        );
+        if (detail && typeof detail === "object") {
+            error.security = detail.security || null;
+            error.detail = detail;
+        }
+        throw error;
     }
 
     return data;
@@ -1310,38 +1347,160 @@ async function loadVolumes() {
 
 
 
+function getSecurityFindings(report) {
+    if (!report || typeof report !== "object") return [];
+    const keys = ["findings", "issues", "results", "violations", "warnings"];
+    return keys.flatMap(key => Array.isArray(report[key]) ? report[key] : [])
+        .map(item => typeof item === "object" && item !== null ? item : { message: String(item) });
+}
+
+function firstSecurityValue(item, keys) {
+    for (const key of keys) {
+        const value = item?.[key];
+        if (value !== undefined && value !== null && value !== "") {
+            return typeof value === "object" ? JSON.stringify(value) : String(value);
+        }
+    }
+    return "";
+}
+
+function renderComposeSecurity(report, blocked = false) {
+    const panel = document.getElementById("composeSecurityResults");
+    const summary = document.getElementById("composeSecuritySummary");
+    const findingsBox = document.getElementById("composeSecurityFindings");
+    panel.hidden = false;
+    findingsBox.replaceChildren();
+
+    if (!report || typeof report !== "object") {
+        summary.className = "security-summary neutral";
+        summary.textContent = blocked
+            ? "Compose validation was blocked. The server did not return a readable security report."
+            : "The server did not return a security report. Check the API response.";
+        return;
+    }
+
+    const isBlocked = blocked || report.blocked === true;
+    const findings = getSecurityFindings(report);
+    summary.className = "security-summary " + (isBlocked ? "blocked" : findings.length ? "warning" : "safe");
+    summary.textContent = isBlocked
+        ? "BLOCKED — security validation rejected this configuration."
+        : findings.length
+            ? "REVIEW — security findings were reported. Review them before deployment."
+            : "No findings were returned in the report. This does not guarantee the configuration is completely secure.";
+
+    const reportText = Object.entries(report)
+        .filter(([key, value]) => !["findings", "issues", "results", "violations", "warnings"].includes(key) && value !== null && typeof value !== "object")
+        .map(([key, value]) => `${key}: ${String(value)}`)
+        .join(" · ");
+    if (reportText) {
+        const meta = document.createElement("div");
+        meta.className = "security-meta";
+        meta.textContent = reportText;
+        findingsBox.appendChild(meta);
+    }
+
+    if (!findings.length) {
+        const empty = document.createElement("div");
+        empty.className = "security-empty";
+        empty.textContent = isBlocked
+            ? "The configuration was blocked, but no individual findings were included."
+            : "No individual findings were included in this report.";
+        findingsBox.appendChild(empty);
+        return;
+    }
+
+    findings.forEach((item, index) => {
+        const card = document.createElement("div");
+        card.className = "security-finding";
+        const title = document.createElement("div");
+        title.className = "security-finding-title";
+        const severity = firstSecurityValue(item, ["severity", "level", "risk"]);
+        const findingTitle = firstSecurityValue(item, ["title", "rule", "check", "code", "name"]);
+        const description = firstSecurityValue(item, ["message", "description", "detail", "finding", "reason"]);
+        const service = firstSecurityValue(item, ["service", "service_name"]);
+        const recommendation = firstSecurityValue(item, ["recommendation", "remediation", "suggestion", "fix"]);
+        title.textContent = `${severity ? `[${severity.toUpperCase()}] ` : ""}` + (findingTitle || description || `Finding ${index + 1}`);
+        card.appendChild(title);
+        if (description && description !== findingTitle) {
+            const detail = document.createElement("div");
+            detail.textContent = description;
+            card.appendChild(detail);
+        }
+        if (service) {
+            const meta = document.createElement("div");
+            meta.className = "security-meta";
+            meta.textContent = `Service: ${service}`;
+            card.appendChild(meta);
+        }
+        if (recommendation) {
+            const fix = document.createElement("div");
+            fix.className = "security-recommendation";
+            fix.textContent = `Recommended fix: ${recommendation}`;
+            card.appendChild(fix);
+        }
+        findingsBox.appendChild(card);
+    });
+}
+
+function showComposeSecurityError(error) {
+    const report = error?.security || error?.detail?.security;
+    if (report) {
+        renderComposeSecurity(report, true);
+        return;
+    }
+    const panel = document.getElementById("composeSecurityResults");
+    panel.hidden = false;
+    const summary = document.getElementById("composeSecuritySummary");
+    summary.className = "security-summary blocked";
+    summary.textContent = `Security report unavailable: ${error.message}`;
+    document.getElementById("composeSecurityFindings").replaceChildren();
+}
+
 function composeRequest(confirmValue=false) {
   return {project_name:document.getElementById("composeProjectName").value.trim(), compose_yaml:document.getElementById("composeYaml").value, confirm:confirmValue};
 }
 async function validateCompose() {
   const message = document.getElementById("composeMessage");
-  message.textContent = "Validating with Docker Compose...";
+  message.textContent = "Validating Compose YAML and checking security...";
   try {
     const result = await api("/api/compose/validate", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(composeRequest(false))});
-    message.textContent = result.message || "Compose file is valid.";
+    renderComposeSecurity(result.security, false);
+    message.textContent = result.message || "Compose validation completed.";
     return true;
-  } catch (error) { message.textContent = `Validation failed: ${error.message}`; return false; }
+  } catch (error) {
+    showComposeSecurityError(error);
+    message.textContent = `Validation failed: ${error.message}`;
+    return false;
+  }
 }
 async function saveCompose() {
   const message = document.getElementById("composeMessage");
-  message.textContent = "Validating and saving YAML...";
+  message.textContent = "Validating security and saving YAML...";
   try {
     const result = await api("/api/compose/save", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(composeRequest(false))});
-    message.textContent = result.message + " File: " + result.config_file;
+    renderComposeSecurity(result.security, false);
+    message.textContent = `${result.message || "Compose YAML saved."} File: ${result.config_file || "saved configuration"}`;
     await loadSavedComposeProjects();
-  } catch (error) { message.textContent = `Save failed: ${error.message}`; }
+  } catch (error) {
+    showComposeSecurityError(error);
+    message.textContent = `Save failed: ${error.message}`;
+  }
 }
 async function deployCompose() {
   const project = document.getElementById("composeProjectName").value.trim();
   if (!project) { document.getElementById("composeMessage").textContent = "Enter a project name."; return; }
-  if (!confirm(`Save and deploy Compose project '${project}'? This may create or update resources belonging to this project. Review the YAML first. Continue?`)) return;
+  if (!confirm(`Save and deploy Compose project '${project}'? Review the YAML first. This may create or update resources belonging to this project. Continue?`)) return;
   const message = document.getElementById("composeMessage");
-  message.textContent = "Validating, saving, and deploying...";
+  message.textContent = "Checking security and deploying...";
   try {
     const result = await api("/api/compose/up", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(composeRequest(true))});
+    renderComposeSecurity(result.security, false);
     message.textContent = `${result.output || "Compose project started."} ${result.warning || ""} Config: ${result.config_file || "saved"}`;
     await Promise.all([loadContainers(), loadSystemOverview(), loadComposeProjects(), loadSavedComposeProjects(), loadNetworks(), loadVolumes()]);
-  } catch (error) { message.textContent = `Deployment failed: ${error.message}`; }
+  } catch (error) {
+    showComposeSecurityError(error);
+    message.textContent = `Deployment failed: ${error.message}`;
+  }
 }
 async function manageSavedCompose(project, action) {
   const verb = action === "stop" ? "stop" : "start/deploy";

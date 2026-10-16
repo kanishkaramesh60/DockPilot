@@ -1,0 +1,41 @@
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: dockpilot-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - dockpilot_prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=3d"
+    restart: unless-stopped
+    networks:
+      - dockpilot-monitoring
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: dockpilot-cadvisor
+    ports:
+      - "8085:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - dockpilot-monitoring
+
+volumes:
+  dockpilot_prometheus_data:
+
+networks:
+  dockpilot-monitoring:
+    name: dockpilot-monitoring

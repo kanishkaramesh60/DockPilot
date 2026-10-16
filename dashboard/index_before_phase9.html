@@ -1,0 +1,1396 @@
+
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>DockPilot | Container Management</title>
+
+<style>
+
+:root {
+
+    color-scheme: dark;
+
+    --bg: #0b1120;
+
+    --panel: #121c30;
+
+    --border: #26354c;
+
+    --text: #e8eef8;
+
+    --muted: #9aabc2;
+
+    --blue: #38bdf8;
+
+    --green: #34d399;
+
+    --red: #fb7185;
+
+    --yellow: #fbbf24;
+
+}
+
+* { box-sizing: border-box; }
+
+body {
+
+    margin: 0;
+
+    background: var(--bg);
+
+    color: var(--text);
+
+    font-family: "Segoe UI", Arial, sans-serif;
+
+}
+
+header {
+
+    padding: 24px 5%;
+
+    border-bottom: 1px solid var(--border);
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 16px;
+
+    flex-wrap: wrap;
+
+}
+
+.brand { font-size: 26px; font-weight: 750; letter-spacing: -.7px; }
+
+.brand span { color: var(--blue); }
+
+.subtitle { color: var(--muted); margin-top: 5px; font-size: 13px; }
+
+main { max-width: 1400px; margin: auto; padding: 28px 5%; }
+
+.topline {
+
+    display: flex; justify-content: space-between; align-items: center;
+
+    gap: 12px; flex-wrap: wrap; margin-bottom: 22px;
+
+}
+
+h1 { font-size: 24px; margin: 0 0 6px; }
+
+p { color: var(--muted); }
+
+button {
+
+    border: 1px solid var(--border);
+
+    background: #1b2a42;
+
+    color: var(--text);
+
+    border-radius: 8px;
+
+    padding: 9px 13px;
+
+    cursor: pointer;
+
+    font-size: 13px;
+
+}
+
+button:hover { border-color: var(--blue); }
+
+button:disabled { opacity: .5; cursor: wait; }
+
+.primary { background: #075985; border-color: #0284c7; }
+
+.danger { color: #fecdd3; }
+
+.cards {
+
+    display: grid;
+
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    gap: 16px;
+
+    margin-bottom: 24px;
+
+}
+
+.card, .panel {
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+}
+
+.card { padding: 20px; }
+
+.card-label { color: var(--muted); font-size: 13px; }
+
+.card-number { font-size: 30px; font-weight: 700; margin-top: 10px; }
+
+.panel { overflow: hidden; margin-bottom: 24px; }
+
+.panel-head {
+
+    padding: 18px 20px;
+
+    border-bottom: 1px solid var(--border);
+
+    display: flex; justify-content: space-between;
+
+    align-items: center; flex-wrap: wrap; gap: 12px;
+
+}
+
+.panel-head h2 { margin: 0; font-size: 17px; }
+
+\#search {
+
+    background: #0b1120; color: var(--text);
+
+    border: 1px solid var(--border); border-radius: 8px;
+
+    padding: 10px 12px; min-width: 220px;
+
+}
+
+.table-wrap { overflow-x: auto; }
+
+table { width: 100%; border-collapse: collapse; text-align: left; }
+
+th, td {
+
+    padding: 15px 18px; border-bottom: 1px solid var(--border);
+
+    font-size: 13px; white-space: nowrap;
+
+}
+
+th { color: var(--muted); font-weight: 600; }
+
+tr:last-child td { border-bottom: 0; }
+
+.name { font-weight: 650; }
+
+.image { color: var(--muted); margin-top: 5px; font-size: 12px; }
+
+.status {
+
+    display: inline-block; border-radius: 20px;
+
+    padding: 5px 9px; font-size: 11px; font-weight: 650;
+
+    background: #26354c; color: #cbd5e1;
+
+}
+
+.status.running { background: #064e3b; color: #a7f3d0; }
+
+.status.exited { background: #3f2931; color: #fecdd3; }
+
+.status.paused { background: #513e12; color: #fde68a; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.actions button { padding: 7px 9px; }
+
+.message { padding: 22px; color: var(--muted); text-align: center; }
+
+.error { color: #fda4af; }
+
+
+.output-content {
+    padding: 16px;
+    overflow: auto;
+    max-height: 620px;
+    color: #cbd5e1;
+    background: #080d18;
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.stats-dashboard { white-space: normal; }
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+.stat-tile, .chart-card {
+    min-width: 0;
+    background: #0d1728;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+}
+.stat-label { color: var(--muted); font-size: 12px; }
+.stat-value { font-size: 24px; font-weight: 700; margin-top: 6px; }
+.stat-unit { color: var(--muted); font-size: 12px; font-weight: 400; }
+.chart-card { margin-top: 14px; }
+.chart-title { font-size: 14px; font-weight: 650; margin-bottom: 4px; }
+.chart-subtitle { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+.chart-canvas { display: block; width: 100%; height: 190px; }
+.memory-chart-row {
+    display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+}
+.memory-canvas { width: 170px; height: 170px; flex: 0 0 170px; }
+.chart-legend { display: grid; gap: 10px; font-size: 12px; }
+.legend-dot {
+    display: inline-block; width: 9px; height: 9px;
+    border-radius: 50%; margin-right: 7px;
+}
+.stats-footer { color: var(--muted); font-size: 11px; margin-top: 12px; }
+@media(max-width: 700px) {
+    .stats-grid { grid-template-columns: 1fr; }
+    .memory-canvas { width: 145px; height: 145px; flex-basis: 145px; }
+}
+
+
+.footer { color: var(--muted); font-size: 12px; text-align: center; padding: 20px; }
+
+@media(max-width: 700px) {
+
+    .cards { grid-template-columns: 1fr; }
+
+    header, main { padding-left: 18px; padding-right: 18px; }
+
+    #search { min-width: 0; width: 100%; }
+
+    .panel-head { align-items: stretch; }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+    <div>
+
+        <div class="brand">Dock<span>Pilot</span></div>
+
+        <div class="subtitle">Intelligent Docker Container Management</div>
+
+    </div>
+
+    <button class="primary" id="refreshBtn" onclick="loadContainers()">
+
+        ↻ Refresh containers
+
+    </button>
+
+</header>
+
+
+
+<main>
+
+    <div class="topline">
+
+        <div>
+
+            <h1>Container Overview</h1>
+
+            <div class="subtitle" id="lastUpdated">Connecting to Docker Engine...</div>
+
+        </div>
+
+        <span class="status" id="connectionStatus">Checking connection</span>
+
+    </div>
+
+
+
+    <section class="cards">
+
+        <div class="card">
+
+            <div class="card-label">Total containers</div>
+
+            <div class="card-number" id="totalCount">—</div>
+
+        </div>
+
+        <div class="card">
+
+            <div class="card-label">Running</div>
+
+            <div class="card-number" id="runningCount">—</div>
+
+        </div>
+
+        <div class="card">
+
+            <div class="card-label">Stopped / Other</div>
+
+            <div class="card-number" id="otherCount">—</div>
+
+        </div>
+
+    </section>
+
+    <section class="panel" id="systemOverviewPanel">
+        <div class="panel-head">
+            <div>
+                <h2>Docker System Overview</h2>
+                <div class="subtitle">Live inventory reported by your connected Docker Engine</div>
+            </div>
+            <button onclick="loadSystemOverview()">Refresh overview</button>
+        </div>
+        <div class="cards system-cards" style="padding: 16px; margin-bottom: 0;">
+            <div class="card"><div class="card-label">Docker Engine</div><div class="card-number" id="engineVersion" style="font-size: 22px;">—</div><div class="subtitle" id="enginePlatform">Checking engine...</div></div>
+            <div class="card"><div class="card-label">Local images</div><div class="card-number" id="imageCount">—</div></div>
+            <div class="card"><div class="card-label">Networks</div><div class="card-number" id="networkCount">—</div></div>
+            <div class="card"><div class="card-label">Volumes</div><div class="card-number" id="volumeCount">—</div></div>
+        </div>
+    </section>
+
+    <section class="panel" id="imagesPanel">
+        <div class="panel-head">
+            <div>
+                <h2>Docker Images</h2>
+                <div class="subtitle">Real images stored in your connected Docker Engine</div>
+            </div>
+            <button onclick="loadImages()">↻ Refresh images</button>
+        </div>
+        <div style="padding:18px 20px; border-bottom:1px solid var(--border); display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <label for="pullImageName" style="color:var(--muted);font-size:13px;">Pull an image</label>
+            <input id="pullImageName" type="text" placeholder="e.g. nginx:alpine" style="background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 12px;min-width:220px;flex:1;" maxlength="255">
+            <button class="primary" id="pullImageBtn" onclick="pullImageFromRegistry()">Pull image</button>
+        </div>
+        <div id="imageMessage" class="message" style="padding:10px 20px;" aria-live="polite">Loading images...</div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Image / Tag</th><th>Image ID</th><th>Size</th><th>Created</th></tr></thead>
+                <tbody id="imageRows"><tr><td colspan="4" class="message">Loading real Docker images...</td></tr></tbody>
+            </table>
+        </div>
+    </section>
+
+    
+    <section class="panel" id="createContainerPanel">
+        <div class="panel-head">
+            <div>
+                <h2>Create a Container</h2>
+                <div class="subtitle">Creates and starts a real container from an image already on this Docker Engine</div>
+            </div>
+        </div>
+        <form id="createContainerForm" style="padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;" onsubmit="createContainerFromDashboard(event)">
+            <div>
+                <label for="createImage" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Docker image *</label>
+                <select id="createImage" required style="width:100%;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;">
+                    <option value="">Loading local images...</option>
+                </select>
+            </div>
+            <div>
+                <label for="createName" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Container name (optional)</label>
+                <input id="createName" maxlength="128" placeholder="e.g. dockpilot-nginx" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;">
+            </div>
+            <div>
+                <label for="containerPort" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Container port</label>
+                <input id="containerPort" type="number" min="1" max="65535" value="80" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;">
+            </div>
+            <div>
+                <label for="hostPort" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Host port (optional)</label>
+                <input id="hostPort" type="number" min="1" max="65535" placeholder="e.g. 8088" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;">
+            </div>
+            <div>
+                <label for="restartPolicy" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Restart policy</label>
+                <select id="restartPolicy" style="width:100%;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;">
+                    <option value="no">No automatic restart</option>
+                    <option value="on-failure">On failure</option>
+                    <option value="always">Always</option>
+                    <option value="unless-stopped">Unless stopped</option>
+                </select>
+            </div>
+            <div style="grid-column:1/-1;">
+                <label for="containerEnv" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Environment variables (optional; one KEY=VALUE per line)</label>
+                <textarea id="containerEnv" rows="3" placeholder="NODE_ENV=production" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;resize:vertical;"></textarea>
+            </div>
+            <div style="grid-column:1/-1;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                <button class="primary" type="submit" id="createContainerBtn">Create and start container</button>
+                <span id="createContainerMessage" class="message" aria-live="polite">Select a local image to begin.</span>
+            </div>
+        </form>
+    </section>
+
+
+<section class="panel" id="composePanel">
+  <div class="panel-head"><div><h2>Docker Compose Projects</h2><div class="subtitle">Save Compose YAML persistently, validate it, and start/stop saved projects. Stop preserves containers, networks, and volumes.</div></div><button onclick="loadComposeProjects()">↻ Refresh projects</button></div>
+  <div style="padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+    <div><label for="composeProjectName" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Project name *</label><input id="composeProjectName" value="dockpilot-demo" maxlength="63" pattern="[a-z0-9][a-z0-9_-]*" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;"></div>
+    <div style="grid-column:1/-1;"><label for="composeYaml" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Compose YAML *</label><textarea id="composeYaml" rows="10" spellcheck="false" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;font-family:Consolas,monospace;resize:vertical;">services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "8090:80"
+</textarea><div class="subtitle">Example uses host port 8090. Ensure the port is free before deploying.</div></div>
+    <div style="grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button type="button" onclick="validateCompose()">Validate YAML</button><button type="button" onclick="saveCompose()">Save YAML</button><button type="button" class="primary" onclick="deployCompose()">Save and deploy</button><span id="composeMessage" class="message" aria-live="polite">Validation does not change Docker resources.</span></div>
+  </div>
+  <div class="panel-head"><div><h2 style="font-size:15px;">Detected Compose Projects</h2><div class="subtitle">Based on labels on real containers. Saved configurations remain available even when stopped.</div></div><button onclick="loadSavedComposeProjects()">↻ Refresh saved projects</button></div>
+  <div id="composeProjectsMessage" class="message" style="padding:10px 20px;">Loading Compose projects...</div>
+  <div id="composeProjectsList" style="padding:0 20px 18px;"></div><div class="panel-head"><div><h2 style="font-size:15px;">Saved Compose Configurations</h2><div class="subtitle">Stored under the DockPilot project directory</div></div></div><div id="savedComposeMessage" class="message" style="padding:10px 20px;">Loading saved configurations...</div><div id="savedComposeList" style="padding:0 20px 18px;"></div>
+</section>
+
+<section class="panel" id="networksPanel">
+        <div class="panel-head">
+            <div><h2>Docker Networks</h2><div class="subtitle">Read-only inventory of networks and connected containers</div></div>
+            <button onclick="loadNetworks()">↻ Refresh networks</button>
+        </div>
+        <div id="networkMessage" class="message" style="padding:10px 20px;" aria-live="polite">Loading networks...</div>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Driver</th><th>Scope</th><th>Connected containers</th><th>Internal</th></tr></thead><tbody id="networkRows"><tr><td colspan="5" class="message">Loading real Docker networks...</td></tr></tbody></table></div>
+    </section>
+
+    <section class="panel" id="volumesPanel">
+        <div class="panel-head">
+            <div><h2>Docker Volumes</h2><div class="subtitle">Read-only inventory of persistent Docker storage; no volumes are changed or deleted</div></div>
+            <button onclick="loadVolumes()">↻ Refresh volumes</button>
+        </div>
+        <div id="volumeMessage" class="message" style="padding:10px 20px;" aria-live="polite">Loading volumes...</div>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Driver</th><th>Scope</th><th>Created</th><th>Mountpoint</th></tr></thead><tbody id="volumeRows"><tr><td colspan="5" class="message">Loading real Docker volumes...</td></tr></tbody></table></div>
+    </section>
+
+<section class="panel">
+
+        <div class="panel-head">
+
+            <h2>Your Docker containers</h2>
+
+            <input id="search" type="search"
+
+                placeholder="Search name, ID or image..."
+
+                oninput="renderContainers()">
+
+        </div>
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Container</th>
+
+                        <th>Status</th>
+
+                        <th>Container ID</th>
+
+                        <th>Actions</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="containerRows">
+
+                    <tr><td colspan="4" class="message">Loading real Docker data...</td></tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div id="listMessage" class="message" hidden></div>
+
+    </section>
+
+
+
+    <section class="panel" id="outputPanel" hidden>
+
+        <div class="panel-head">
+
+            <h2 id="outputTitle">Container output</h2>
+
+            <button onclick="closeOutputPanel()">
+
+                Close
+
+            </button>
+
+        </div>
+
+        <div id="outputContent" class="output-content"></div>
+
+    </section>
+
+
+
+    <div class="footer">
+
+        Data is fetched from your configured Docker Engine through the DockPilot API.
+
+        This dashboard does not use sample container records.
+
+    </div>
+
+</main>
+
+
+
+<script>
+
+let containers = [];
+let busy = false;
+let statsInterval = null;
+let statsContainerId = null;
+let statsHistory = [];
+let previousNetworkSample = null;
+const MAX_STATS_SAMPLES = 20;
+const STATS_REFRESH_MS = 5000;
+
+
+
+function escapeHtml(value) {
+
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+
+        "&": "&amp;",
+
+        "<": "&lt;",
+
+        ">": "&gt;",
+
+        '"': "&quot;",
+
+        "'": "&#39;"
+
+    })[char]);
+
+}
+
+
+
+function statusClass(status) {
+
+    const value = String(status || "").toLowerCase();
+
+    if (value === "running") return "running";
+
+    if (value === "exited" || value === "dead") return "exited";
+
+    if (value === "paused") return "paused";
+
+    return "";
+
+}
+
+
+
+async function api(url, options = {}) {
+
+    const response = await fetch(url, options);
+
+    const text = await response.text();
+
+    let data;
+
+
+
+    try { data = JSON.parse(text); }
+
+    catch { data = text; }
+
+
+
+    if (!response.ok) {
+
+        const detail = data && data.detail
+
+            ? data.detail
+
+            : (typeof data === "string" ? data : response.statusText);
+
+        throw new Error(detail || `HTTP ${response.status}`);
+
+    }
+
+    return data;
+
+}
+
+
+
+function formatBytes(bytes) {
+    const value = Number(bytes || 0);
+    if (!value) return "0 B";
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+    return `${(value / Math.pow(1024, index)).toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
+}
+
+function formatDate(value) {
+    if (!value) return "—";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? escapeHtml(value) : escapeHtml(date.toLocaleString());
+}
+
+async function loadImages() {
+    const rows = document.getElementById("imageRows");
+    const message = document.getElementById("imageMessage");
+    rows.innerHTML = '<tr><td colspan="4" class="message">Loading real Docker images...</td></tr>';
+    try {
+        const images = await api("/api/images");
+        if (!Array.isArray(images)) throw new Error("The API returned an unexpected image list.");
+        if (!images.length) {
+            rows.innerHTML = '<tr><td colspan="4" class="message">No local images found. Pull an image above to get started.</td></tr>';
+        } else {
+            rows.innerHTML = images.map(image => {
+                const tags = Array.isArray(image.tags) ? image.tags : ["<none>:<none>"];
+                return `<tr><td><div class="name">${escapeHtml(tags.join(", "))}</div></td><td>${escapeHtml(image.id || "—")}</td><td>${formatBytes(image.size_bytes)}</td><td>${formatDate(image.created)}</td></tr>`;
+            }).join("");
+        }
+        message.textContent = `${images.length} local image${images.length === 1 ? "" : "s"} loaded from Docker.`;
+        message.className = "message";
+        refreshCreateImageOptions(images);
+    } catch (error) {
+        rows.innerHTML = `<tr><td colspan="4" class="message error">${escapeHtml(error.message)}</td></tr>`;
+        message.textContent = "Could not load images. Check that Docker Desktop is running.";
+        message.className = "message error";
+    }
+}
+
+async function pullImageFromRegistry() {
+    const input = document.getElementById("pullImageName");
+    const button = document.getElementById("pullImageBtn");
+    const message = document.getElementById("imageMessage");
+    const image = input.value.trim();
+    if (!image) { message.textContent = "Enter an image name, such as nginx:alpine."; message.className = "message error"; input.focus(); return; }
+    if (!confirm(`Download Docker image "${image}"? This may use network data and disk space.`)) return;
+    button.disabled = true;
+    button.textContent = "Pulling...";
+    message.textContent = `Downloading ${image}. This may take a while...`;
+    message.className = "message";
+    try {
+        const result = await api("/api/images/pull", {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({image})
+        });
+        message.textContent = result.message || `Image ${image} downloaded successfully.`;
+        message.className = "message success";
+        input.value = "";
+        await loadImages();
+        await loadSystemOverview();
+        message.textContent = result.message || `Image ${image} downloaded successfully.`;
+        message.className = "message success";
+    } catch (error) {
+        message.textContent = `Image pull failed: ${error.message}`;
+        message.className = "message error";
+    } finally {
+        button.disabled = false;
+        button.textContent = "Pull image";
+    }
+}
+
+async function loadContainers() {
+
+    if (busy) return;
+
+    const refreshBtn = document.getElementById("refreshBtn");
+
+    refreshBtn.disabled = true;
+
+
+
+    try {
+
+        const data = await api("/api/containers");
+
+        containers = Array.isArray(data) ? data : data.containers;
+
+
+
+        if (!Array.isArray(containers)) {
+
+            throw new Error("The API returned an unexpected container list.");
+
+        }
+
+
+
+        document.getElementById("connectionStatus").textContent = "Docker connected";
+
+        document.getElementById("connectionStatus").className = "status running";
+
+        document.getElementById("lastUpdated").textContent =
+
+            "Last updated: " + new Date().toLocaleTimeString();
+
+
+
+        document.getElementById("totalCount").textContent = containers.length;
+
+        document.getElementById("runningCount").textContent =
+
+            containers.filter(c => c.status === "running").length;
+
+        document.getElementById("otherCount").textContent =
+
+            containers.filter(c => c.status !== "running").length;
+
+
+
+        renderContainers();
+
+    } catch (error) {
+
+        document.getElementById("connectionStatus").textContent = "Connection error";
+
+        document.getElementById("connectionStatus").className = "status exited";
+
+        document.getElementById("lastUpdated").textContent = error.message;
+
+        document.getElementById("containerRows").innerHTML =
+
+            '<tr><td colspan="4" class="message error">' +
+
+            escapeHtml(error.message) + '</td></tr>';
+
+        document.getElementById("totalCount").textContent = "—";
+
+        document.getElementById("runningCount").textContent = "—";
+
+        document.getElementById("otherCount").textContent = "—";
+
+    } finally {
+
+        refreshBtn.disabled = false;
+
+    }
+
+}
+
+
+
+async function loadSystemOverview() {
+    try {
+        const data = await api("/api/system/overview");
+        document.getElementById("engineVersion").textContent = "v" + data.engine_version;
+        document.getElementById("enginePlatform").textContent =
+            `${data.operating_system} · ${data.architecture} · API ${data.api_version}`;
+        document.getElementById("imageCount").textContent = data.images;
+        document.getElementById("networkCount").textContent = data.networks;
+        document.getElementById("volumeCount").textContent = data.volumes;
+    } catch (error) {
+        document.getElementById("engineVersion").textContent = "Unavailable";
+        document.getElementById("enginePlatform").textContent = error.message;
+        document.getElementById("imageCount").textContent = "—";
+        document.getElementById("networkCount").textContent = "—";
+        document.getElementById("volumeCount").textContent = "—";
+    }
+}
+
+
+function renderContainers() {
+
+    const query = document.getElementById("search").value.trim().toLowerCase();
+
+    const filtered = containers.filter(c =>
+
+        [c.name, c.id, c.image, c.status].some(value =>
+
+            String(value ?? "").toLowerCase().includes(query)
+
+        )
+
+    );
+
+
+
+    const rows = document.getElementById("containerRows");
+
+    document.getElementById("listMessage").hidden = true;
+
+
+
+    if (filtered.length === 0) {
+
+        rows.innerHTML = "";
+
+        const message = document.getElementById("listMessage");
+
+        message.textContent = containers.length === 0
+
+            ? "No containers were found in this Docker Engine."
+
+            : "No containers match your search.";
+
+        message.hidden = false;
+
+        return;
+
+    }
+
+
+
+    rows.innerHTML = filtered.map(c => {
+
+        const id = escapeHtml(c.id);
+
+        const name = escapeHtml(c.name);
+
+        const image = escapeHtml(c.image);
+
+        const status = escapeHtml(c.status);
+
+        const running = c.status === "running";
+
+
+
+        return `<tr>
+
+            <td>
+
+                <div class="name">${name}</div>
+
+                <div class="image">${image}</div>
+
+            </td>
+
+            <td><span class="status ${statusClass(c.status)}">${status}</span></td>
+
+            <td>${id}</td>
+
+            <td><div class="actions">
+
+                ${!running
+
+                    ? `<button onclick="containerAction('${id}','start')">Start</button>`
+
+                    : `<button onclick="containerAction('${id}','stop')">Stop</button>`}
+
+                <button onclick="containerAction('${id}','restart')">Restart</button>
+
+                <button onclick="showDetails('${id}')">Details</button>
+
+                <button onclick="showLogs('${id}')">Logs</button>
+                <button onclick="showStats('${id}')">Stats</button>
+
+            </div></td>
+
+        </tr>`;
+
+    }).join("");
+
+}
+
+
+
+async function containerAction(id, action) {
+
+    const container = containers.find(c => c.id === id);
+
+    if (!container) return;
+
+
+
+    if (action === "stop" || action === "restart") {
+
+        if (!confirm(`${action.toUpperCase()} container "${container.name}"?`)) {
+
+            return;
+
+        }
+
+    }
+
+
+
+    busy = true;
+
+    try {
+
+        await api(`/api/containers/${encodeURIComponent(id)}/${action}`, {
+
+            method: "POST"
+
+        });
+
+        await loadContainers();
+
+        alert(`Docker accepted the ${action} request for ${container.name}.`);
+
+    } catch (error) {
+
+        alert(`Could not ${action} container: ${error.message}`);
+
+    } finally {
+
+        busy = false;
+
+    }
+
+}
+
+
+
+async function showDetails(id) {
+
+    showOutput("Container details", "Loading details...");
+
+    try {
+
+        const data = await api(`/api/containers/${encodeURIComponent(id)}`);
+
+        document.getElementById("outputContent").textContent =
+
+            JSON.stringify(data, null, 2);
+
+    } catch (error) {
+
+        document.getElementById("outputContent").textContent = error.message;
+
+    }
+
+}
+
+
+
+async function showLogs(id) {
+
+    showOutput("Container logs", "Loading logs...");
+
+    try {
+
+        const data = await api(
+
+            `/api/containers/${encodeURIComponent(id)}/logs?tail=100`
+
+        );
+
+        document.getElementById("outputContent").textContent = data.logs || "(No logs returned.)";
+
+    } catch (error) {
+
+        document.getElementById("outputContent").textContent = error.message;
+
+    }
+
+}
+
+
+
+
+async function showStats(id) {
+    stopStatsPolling();
+    showOutput("Live container statistics", "Fetching Docker statistics...");
+    statsContainerId = id;
+    statsHistory = [];
+    previousNetworkSample = null;
+    document.getElementById("outputContent").classList.add("stats-dashboard");
+    document.getElementById("outputContent").innerHTML = `
+        <div class="stats-grid">
+            <div class="stat-tile"><div class="stat-label">CPU usage</div><div class="stat-value" id="cpuCurrent">— <span class="stat-unit">%</span></div></div>
+            <div class="stat-tile"><div class="stat-label">Memory usage</div><div class="stat-value" id="memoryCurrent">—</div><div class="stat-label" id="memoryPercent">Waiting for sample...</div></div>
+        </div>
+        <div class="chart-card"><div class="chart-title">CPU usage over time</div><div class="chart-subtitle">One sample every 5 seconds · latest 20 samples</div><canvas id="cpuChart" class="chart-canvas" aria-label="CPU usage line graph"></canvas></div>
+        <div class="chart-card"><div class="chart-title">Memory utilization</div><div class="chart-subtitle">Used memory compared with the Docker-reported memory limit</div>
+            <div class="memory-chart-row"><canvas id="memoryChart" class="memory-canvas" aria-label="Memory usage doughnut chart"></canvas>
+                <div class="chart-legend"><div><span class="legend-dot" style="background:#38bdf8"></span><span id="memoryUsedLegend">Used: —</span></div>
+                <div><span class="legend-dot" style="background:#26354c"></span><span id="memoryFreeLegend">Remaining: —</span></div></div>
+            </div>
+        </div>
+        <div class="chart-card"><div class="chart-title">Network throughput</div><div class="chart-subtitle">Receive and transmit rates from successive Docker samples (KiB/s)</div><canvas id="networkChart" class="chart-canvas" aria-label="Network receive and transmit line graph"></canvas></div>
+        <div class="stats-footer" id="statsUpdated">Waiting for first sample...</div>`;
+    await refreshContainerStats(id);
+    if (statsContainerId === id) statsInterval = setInterval(() => refreshContainerStats(id), STATS_REFRESH_MS);
+}
+
+async function refreshContainerStats(id) {
+    if (statsContainerId !== id) return;
+    try {
+        const data = await api(`/api/containers/${encodeURIComponent(id)}/stats`);
+        const now = Date.now();
+        let rxRate = 0, txRate = 0;
+        if (previousNetworkSample) {
+            const elapsed = Math.max((now - previousNetworkSample.time) / 1000, 0.001);
+            rxRate = Math.max(0, data.network_rx_bytes - previousNetworkSample.rx) / elapsed / 1024;
+            txRate = Math.max(0, data.network_tx_bytes - previousNetworkSample.tx) / elapsed / 1024;
+        }
+        previousNetworkSample = { time: now, rx: data.network_rx_bytes || 0, tx: data.network_tx_bytes || 0 };
+        statsHistory.push({
+            time: new Date(now).toLocaleTimeString(),
+            cpu: Number(data.cpu_percent) || 0,
+            memoryUsage: Number(data.memory_usage_bytes) || 0,
+            memoryLimit: Number(data.memory_limit_bytes) || 0,
+            rxRate, txRate
+        });
+        if (statsHistory.length > MAX_STATS_SAMPLES) statsHistory.shift();
+
+        const mib = bytes => (bytes / (1024 * 1024)).toFixed(2) + " MiB";
+        const cpu = document.getElementById("cpuCurrent");
+        const memory = document.getElementById("memoryCurrent");
+        if (!cpu || !memory || statsContainerId !== id) return;
+        cpu.innerHTML = `${(Number(data.cpu_percent) || 0).toFixed(2)} <span class="stat-unit">%</span>`;
+        memory.textContent = mib(data.memory_usage_bytes || 0);
+        document.getElementById("memoryPercent").textContent =
+            data.memory_percent == null ? "Memory limit unavailable" : `${Number(data.memory_percent).toFixed(2)}% of limit`;
+        document.getElementById("memoryUsedLegend").textContent = `Used: ${mib(data.memory_usage_bytes || 0)}`;
+        const remaining = Math.max((data.memory_limit_bytes || 0) - (data.memory_usage_bytes || 0), 0);
+        document.getElementById("memoryFreeLegend").textContent =
+            data.memory_limit_bytes ? `Remaining: ${mib(remaining)}` : "Remaining: limit unavailable";
+        document.getElementById("statsUpdated").textContent =
+            `Container: ${data.name} · Updated ${new Date(now).toLocaleTimeString()} · Refreshing every 5 seconds`;
+        drawLineChart("cpuChart", statsHistory.map(s => s.cpu), "#38bdf8", "%");
+        drawDoughnutChart("memoryChart", Number(data.memory_usage_bytes) || 0, Number(data.memory_limit_bytes) || 0);
+        drawNetworkChart("networkChart", statsHistory);
+        const error = document.getElementById("statsError");
+        if (error) error.remove();
+    } catch (error) {
+        const output = document.getElementById("outputContent");
+        if (output && statsContainerId === id) {
+            let errorLine = document.getElementById("statsError");
+            if (!errorLine) {
+                errorLine = document.createElement("div");
+                errorLine.id = "statsError";
+                errorLine.className = "error";
+                errorLine.style.marginTop = "12px";
+                output.appendChild(errorLine);
+            }
+            errorLine.textContent = `Statistics unavailable: ${error.message}`;
+        }
+        if (/not running/i.test(error.message)) stopStatsPolling();
+    }
+}
+
+function stopStatsPolling() {
+    if (statsInterval !== null) { clearInterval(statsInterval); statsInterval = null; }
+    statsContainerId = null;
+}
+
+function closeOutputPanel() {
+    stopStatsPolling();
+    document.getElementById("outputPanel").hidden = true;
+    document.getElementById("outputContent").classList.remove("stats-dashboard");
+}
+
+function prepareCanvas(canvas) {
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, width: rect.width, height: rect.height };
+}
+
+function drawLineChart(canvasId, values, color, unit) {
+    const prepared = prepareCanvas(document.getElementById(canvasId));
+    if (!prepared) return;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    const left = 42, right = 12, top = 12, bottom = 28;
+    const plotW = width - left - right, plotH = height - top - bottom;
+    const maxValue = Math.max(10, Math.ceil(Math.max(...values, 0) / 10) * 10);
+    ctx.font = "11px Segoe UI, Arial"; ctx.lineWidth = 1; ctx.strokeStyle = "#26354c"; ctx.fillStyle = "#9aabc2";
+    for (let i = 0; i <= 4; i++) {
+        const y = top + plotH * i / 4;
+        ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(width - right, y); ctx.stroke();
+        ctx.fillText(`${Math.round(maxValue * (4 - i) / 4)}${unit}`, 2, y + 4);
+    }
+    if (!values.length) return;
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    values.forEach((value, i) => {
+        const x = values.length === 1 ? left + plotW : left + plotW * i / (MAX_STATS_SAMPLES - 1);
+        const y = top + plotH - (Math.max(0, value) / maxValue) * plotH;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.fillStyle = "#9aabc2";
+    const first = statsHistory[0]?.time || "", last = statsHistory[statsHistory.length - 1]?.time || "";
+    ctx.fillText(first, left, height - 7);
+    ctx.fillText(last, Math.max(left, width - right - ctx.measureText(last).width), height - 7);
+}
+
+function drawDoughnutChart(canvasId, used, limit) {
+    const prepared = prepareCanvas(document.getElementById(canvasId));
+    if (!prepared) return;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    const x = width / 2, y = height / 2, radius = Math.min(width, height) * 0.36;
+    ctx.lineWidth = Math.max(13, radius * 0.32); ctx.strokeStyle = "#26354c";
+    ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
+    ctx.textAlign = "center";
+    if (limit > 0) {
+        ctx.strokeStyle = "#38bdf8"; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.arc(x, y, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(used / limit, 1)); ctx.stroke();
+        ctx.lineCap = "butt"; ctx.fillStyle = "#e8eef8"; ctx.font = "bold 18px Segoe UI, Arial";
+        ctx.fillText(`${(used / limit * 100).toFixed(1)}%`, x, y + 5);
+    } else {
+        ctx.fillStyle = "#9aabc2"; ctx.font = "12px Segoe UI, Arial"; ctx.fillText("No limit", x, y + 4);
+    }
+    ctx.textAlign = "start";
+}
+
+function drawNetworkChart(canvasId, history) {
+    const prepared = prepareCanvas(document.getElementById(canvasId));
+    if (!prepared) return;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    const left = 52, right = 12, top = 12, bottom = 28;
+    const plotW = width - left - right, plotH = height - top - bottom;
+    const maxValue = Math.max(1, Math.ceil(Math.max(...history.map(s => Math.max(s.rxRate, s.txRate)), 0)));
+    ctx.font = "11px Segoe UI, Arial"; ctx.lineWidth = 1; ctx.strokeStyle = "#26354c"; ctx.fillStyle = "#9aabc2";
+    for (let i = 0; i <= 4; i++) {
+        const y = top + plotH * i / 4;
+        ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(width - right, y); ctx.stroke();
+        ctx.fillText((maxValue * (4 - i) / 4).toFixed(1), 2, y + 4);
+    }
+    for (const [key, color] of [["rxRate", "#38bdf8"], ["txRate", "#34d399"]]) {
+        if (!history.length) continue;
+        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+        history.forEach((sample, i) => {
+            const x = history.length === 1 ? left + plotW : left + plotW * i / (MAX_STATS_SAMPLES - 1);
+            const y = top + plotH - (sample[key] / maxValue) * plotH;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+    }
+    ctx.fillStyle = "#38bdf8"; ctx.fillRect(left, height - 12, 8, 8);
+    ctx.fillStyle = "#9aabc2"; ctx.fillText("Receive", left + 13, height - 5);
+    ctx.fillStyle = "#34d399"; ctx.fillRect(left + 78, height - 12, 8, 8);
+    ctx.fillStyle = "#9aabc2"; ctx.fillText("Transmit", left + 91, height - 5);
+}
+
+window.addEventListener("resize", () => {
+    if (!statsContainerId || !statsHistory.length) return;
+    const latest = statsHistory[statsHistory.length - 1];
+    drawLineChart("cpuChart", statsHistory.map(s => s.cpu), "#38bdf8", "%");
+    drawDoughnutChart("memoryChart", latest.memoryUsage, latest.memoryLimit);
+    drawNetworkChart("networkChart", statsHistory);
+});
+
+function showOutput(title, content) {
+
+    stopStatsPolling();
+    document.getElementById("outputContent").classList.remove("stats-dashboard");
+    document.getElementById("outputTitle").textContent = title;
+
+    document.getElementById("outputContent").textContent = content;
+
+    document.getElementById("outputPanel").hidden = false;
+
+    document.getElementById("outputPanel").scrollIntoView({ behavior: "smooth" });
+
+}
+
+
+
+function refreshCreateImageOptions(images) {
+    const select = document.getElementById("createImage");
+    const previous = select.value;
+    const usable = [];
+    images.forEach(image => {
+        (image.tags || []).forEach(tag => {
+            if (tag && tag !== "<none>:<none>" && !usable.includes(tag)) usable.push(tag);
+        });
+    });
+    select.innerHTML = '<option value="">Choose a local image...</option>' +
+        usable.map(tag => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`).join("");
+    if (previous && usable.includes(previous)) select.value = previous;
+    if (!usable.length) select.innerHTML = '<option value="">No tagged images found — pull one above</option>';
+}
+
+async function createContainerFromDashboard(event) {
+    event.preventDefault();
+    const image = document.getElementById("createImage").value;
+    const name = document.getElementById("createName").value.trim();
+    const hostPortText = document.getElementById("hostPort").value.trim();
+    const containerPortText = document.getElementById("containerPort").value.trim();
+    const restartPolicy = document.getElementById("restartPolicy").value;
+    const envText = document.getElementById("containerEnv").value;
+    const message = document.getElementById("createContainerMessage");
+    const button = document.getElementById("createContainerBtn");
+
+    if (!image) {
+        message.textContent = "Choose a local Docker image first.";
+        message.className = "message error";
+        return;
+    }
+    if (hostPortText && !containerPortText) {
+        message.textContent = "Enter a container port when using a host port.";
+        message.className = "message error";
+        return;
+    }
+    const payload = {
+        image,
+        name: name || null,
+        host_port: hostPortText ? Number(hostPortText) : null,
+        container_port: containerPortText ? Number(containerPortText) : null,
+        environment: envText.split(/\r?\n/).map(line => line.trim()).filter(Boolean),
+        restart_policy: restartPolicy
+    };
+    if (!confirm(`Create and start a new container from "${image}"${name ? ` named "${name}"` : ""}?`)) return;
+
+    button.disabled = true;
+    button.textContent = "Creating...";
+    message.textContent = "Creating and starting a real Docker container...";
+    message.className = "message";
+    try {
+        const result = await api("/api/containers", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload)
+        });
+        message.textContent = result.message || `Container ${result.name} created.`;
+        message.className = "message success";
+        document.getElementById("createContainerForm").reset();
+        document.getElementById("containerPort").value = "80";
+        document.getElementById("restartPolicy").value = "no";
+        await loadContainers();
+        await loadSystemOverview();
+    } catch (error) {
+        message.textContent = `Could not create container: ${error.message}`;
+        message.className = "message error";
+    } finally {
+        button.disabled = false;
+        button.textContent = "Create and start container";
+    }
+}
+
+
+async function loadNetworks() {
+    const message = document.getElementById("networkMessage");
+    const rows = document.getElementById("networkRows");
+    message.textContent = "Loading Docker networks...";
+    try {
+        const data = await api("/api/networks");
+        rows.innerHTML = data.length ? data.map(n => `<tr>
+            <td><div class="name">${escapeHtml(n.name)}</div><div class="image">${escapeHtml(n.id)}</div></td>
+            <td>${escapeHtml(n.driver)}</td><td>${escapeHtml(n.scope)}</td>
+            <td>${Number(n.container_count)}${n.containers && n.containers.length ? `<div class="image">${n.containers.map(escapeHtml).join(", ")}</div>` : ""}</td>
+            <td>${n.internal ? "Yes" : "No"}</td></tr>`).join("") : '<tr><td colspan="5" class="message">No Docker networks found.</td></tr>';
+        message.textContent = `${data.length} real Docker network(s) loaded. Read-only view.`;
+    } catch (error) {
+        message.textContent = `Could not load networks: ${error.message}`;
+        rows.innerHTML = '<tr><td colspan="5" class="message">Network inventory unavailable.</td></tr>';
+    }
+}
+
+async function loadVolumes() {
+    const message = document.getElementById("volumeMessage");
+    const rows = document.getElementById("volumeRows");
+    message.textContent = "Loading Docker volumes...";
+    try {
+        const data = await api("/api/volumes");
+        rows.innerHTML = data.length ? data.map(v => `<tr>
+            <td><div class="name">${escapeHtml(v.name)}</div></td>
+            <td>${escapeHtml(v.driver)}</td><td>${escapeHtml(v.scope)}</td>
+            <td>${escapeHtml(v.created || "Unknown")}</td><td style="max-width:360px;overflow-wrap:anywhere;">${escapeHtml(v.mountpoint || "Not reported")}</td></tr>`).join("") : '<tr><td colspan="5" class="message">No Docker volumes found.</td></tr>';
+        message.textContent = `${data.length} real Docker volume(s) loaded. Read-only view; no storage was modified.`;
+    } catch (error) {
+        message.textContent = `Could not load volumes: ${error.message}`;
+        rows.innerHTML = '<tr><td colspan="5" class="message">Volume inventory unavailable.</td></tr>';
+    }
+}
+
+
+
+function composeRequest(confirmValue=false) {
+  return {project_name:document.getElementById("composeProjectName").value.trim(), compose_yaml:document.getElementById("composeYaml").value, confirm:confirmValue};
+}
+async function validateCompose() {
+  const message = document.getElementById("composeMessage");
+  message.textContent = "Validating with Docker Compose...";
+  try {
+    const result = await api("/api/compose/validate", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(composeRequest(false))});
+    message.textContent = result.message || "Compose file is valid.";
+    return true;
+  } catch (error) { message.textContent = `Validation failed: ${error.message}`; return false; }
+}
+async function saveCompose() {
+  const message = document.getElementById("composeMessage");
+  message.textContent = "Validating and saving YAML...";
+  try {
+    const result = await api("/api/compose/save", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(composeRequest(false))});
+    message.textContent = result.message + " File: " + result.config_file;
+    await loadSavedComposeProjects();
+  } catch (error) { message.textContent = `Save failed: ${error.message}`; }
+}
+async function deployCompose() {
+  const project = document.getElementById("composeProjectName").value.trim();
+  if (!project) { document.getElementById("composeMessage").textContent = "Enter a project name."; return; }
+  if (!confirm(`Save and deploy Compose project '${project}'? This may create or update resources belonging to this project. Review the YAML first. Continue?`)) return;
+  const message = document.getElementById("composeMessage");
+  message.textContent = "Validating, saving, and deploying...";
+  try {
+    const result = await api("/api/compose/up", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(composeRequest(true))});
+    message.textContent = `${result.output || "Compose project started."} ${result.warning || ""} Config: ${result.config_file || "saved"}`;
+    await Promise.all([loadContainers(), loadSystemOverview(), loadComposeProjects(), loadSavedComposeProjects(), loadNetworks(), loadVolumes()]);
+  } catch (error) { message.textContent = `Deployment failed: ${error.message}`; }
+}
+async function manageSavedCompose(project, action) {
+  const verb = action === "stop" ? "stop" : "start/deploy";
+  const detail = action === "stop" ? "Containers will stop but will not be removed; networks and volumes are preserved." : "This may create or start resources described in the saved YAML.";
+  if (!confirm(`Confirm ${verb} for Compose project '${project}'? ${detail}`)) return;
+  const message = document.getElementById("savedComposeMessage");
+  message.textContent = `${verb} in progress for ${project}...`;
+  try {
+    const result = await api(`/api/compose/${encodeURIComponent(project)}/${action}?confirm=true`, {method:"POST"});
+    message.textContent = `${result.output || `Project ${action} complete.`} ${result.note || ""}`;
+    await Promise.all([loadComposeProjects(), loadSavedComposeProjects(), loadContainers(), loadSystemOverview()]);
+  } catch (error) { message.textContent = `Could not ${action} project: ${error.message}`; }
+}
+async function loadSavedComposeProjects() {
+  const message = document.getElementById("savedComposeMessage");
+  const list = document.getElementById("savedComposeList");
+  try {
+    const projects = await api("/api/compose/saved");
+    message.textContent = `${projects.length} saved Compose configuration(s). YAML files are stored on disk.`;
+    list.innerHTML = projects.length ? projects.map(p => `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin:8px 0;"><strong>${escapeHtml(p.name)}</strong><div class="subtitle" style="overflow-wrap:anywhere;">${escapeHtml(p.config_file)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button type="button" onclick="manageSavedCompose('${escapeHtml(p.name)}','start')">Start / Deploy</button><button type="button" onclick="manageSavedCompose('${escapeHtml(p.name)}','stop')">Stop (preserve resources)</button></div></div>`).join("") : '<div class="message">No saved Compose YAML files yet. Use Save YAML or Save and deploy above.</div>';
+  } catch (error) { message.textContent = `Could not load saved configurations: ${error.message}`; list.innerHTML = ""; }
+}
+async function loadComposeProjects() {
+  const message = document.getElementById("composeProjectsMessage");
+  const list = document.getElementById("composeProjectsList");
+  try {
+    const projects = await api("/api/compose/projects");
+    message.textContent = `${projects.length} Compose project(s) detected.`;
+    list.innerHTML = projects.length ? projects.map(p => `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin:8px 0;"><strong>${escapeHtml(p.name)}</strong><div class="subtitle">${p.running} running · ${p.stopped} stopped</div><div style="margin-top:8px;">${p.containers.map(c => `<div>${escapeHtml(c.name)} — ${escapeHtml(c.service)} — ${escapeHtml(c.status)}</div>`).join("")}</div></div>`).join("") : '<div class="message">No Compose-labelled containers detected yet.</div>';
+  } catch (error) { message.textContent = `Could not load projects: ${error.message}`; list.innerHTML = ""; }
+}
+
+loadComposeProjects();
+loadSavedComposeProjects();
+loadContainers();
+loadSystemOverview();
+loadImages();
+loadNetworks();
+loadVolumes();
+
+setInterval(loadComposeProjects, 30000);
+setInterval(loadContainers, 10000);
+setInterval(loadSystemOverview, 30000);
+setInterval(loadImages, 30000);
+setInterval(loadNetworks, 30000);
+setInterval(loadVolumes, 30000);
+
+</script>
+
+</body>
+
+</html>

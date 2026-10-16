@@ -10,6 +10,8 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from docker.errors import DockerException, NotFound, APIError
 
+from autoscaling_service import get_service_metrics
+
 from compose_security import (
     ComposeSecurityError,
     analyze_compose_security,
@@ -655,6 +657,35 @@ def compose_stop_saved(
             "Networks and volumes are preserved."
         ),
     }
+
+
+# --------------------------------------------------
+# PHASE 9: READ-ONLY AUTOSCALING METRICS
+# --------------------------------------------------
+
+@app.get("/api/autoscaling/metrics")
+def autoscaling_metrics(project_name: str, service_name: str):
+    """Read real metrics for one explicitly selected Compose service."""
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", project_name):
+        raise HTTPException(status_code=400, detail="Invalid Compose project name.")
+
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", service_name):
+        raise HTTPException(status_code=400, detail="Invalid Compose service name.")
+
+    compose_file = _compose_path(project_name)
+    if not compose_file.is_file():
+        raise HTTPException(status_code=404, detail="Saved Compose project not found.")
+
+    try:
+        return get_service_metrics(project_name, service_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        from docker.errors import DockerException
+
+        if isinstance(exc, DockerException):
+            raise HTTPException(status_code=503, detail=f"Docker Engine error: {exc}") from exc
+        raise
 
 
 # --------------------------------------------------
