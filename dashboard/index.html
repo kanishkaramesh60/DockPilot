@@ -1771,7 +1771,7 @@ setInterval(refreshDockPilotScaling, 10000);
      document.getElementById('healthCount').textContent=String(data.container_count??items.length);
      document.getElementById('healthProblems').textContent=String(data.problem_count??count('stopped')+count('unhealthy'));
      document.getElementById('healthHealthy').textContent=String(count('healthy'));
-     document.getElementById('healthNoCheck').textContent=String(count('running_no_healthcheck'));
+     const noCheck=document.getElementById('healthNoCheck');if(noCheck)noCheck.textContent=String(count('running_no_healthcheck'));
      items.forEach(item=>{const tr=document.createElement('tr');const vals=[item.name||item.id||'—',item.image||'—',item.state||'—',item.status||item.health||'—',item.reason||'—',item.recovery||'not attempted'];vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=String(v);if(i===3){td.style.fontWeight='700';td.style.color=['stopped','unhealthy'].includes(String(v))?'#dc2626':['healthy'].includes(String(v))?'#059669':'#b45309'}tr.appendChild(td)});body.appendChild(tr)});
      msg.textContent='Last checked: '+(data.checked_at||'unknown')+'. Auto-recovery is '+(data.auto_recovery_enabled?'enabled':'disabled')+'.';
    }catch(err){msg.textContent='Could not load container health. Confirm /api/health is available in manager/main.py.';}
