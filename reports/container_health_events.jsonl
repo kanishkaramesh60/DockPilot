@@ -97,3 +97,15 @@
 {"timestamp": "2026-10-20T13:47:10+00:00", "type": "health_alert", "container_id": "e58c2447ed7a", "container_name": "dockershield-test", "status": "stopped", "reason": "Container state is exited."}
 {"timestamp": "2026-10-20T13:47:10+00:00", "type": "health_alert", "container_id": "bfd50974922c", "container_name": "jenkins-cicd-app-container", "status": "stopped", "reason": "Container state is exited."}
 {"timestamp": "2026-10-20T13:47:10+00:00", "type": "health_alert", "container_id": "b9f0c0450c0e", "container_name": "dockershield-socket-test", "status": "stopped", "reason": "Container state is exited."}
+{"timestamp": "2026-10-20T13:53:30+00:00", "type": "health_alert", "container_id": "6153cfb44118", "container_name": "dockpilot-demo-web-1", "status": "stopped", "reason": "Container state is exited."}
+{"timestamp": "2026-10-20T13:53:30+00:00", "type": "health_alert", "container_id": "83790c9405d4", "container_name": "dockpilot-nginx-demo", "status": "stopped", "reason": "Container state is exited."}
+{"timestamp": "2026-10-20T13:53:30+00:00", "type": "health_alert", "container_id": "e6059c030951", "container_name": "thirsty_blackburn", "status": "stopped", "reason": "Container state is exited."}
+{"timestamp": "2026-10-20T13:53:30+00:00", "type": "health_alert", "container_id": "e58c2447ed7a", "container_name": "dockershield-test", "status": "stopped", "reason": "Container state is exited."}
+{"timestamp": "2026-10-20T13:53:30+00:00", "type": "health_alert", "container_id": "bfd50974922c", "container_name": "jenkins-cicd-app-container", "status": "stopped", "reason": "Container state is exited."}
+{"timestamp": "2026-10-20T13:53:30+00:00", "type": "health_alert", "container_id": "b9f0c0450c0e", "container_name": "dockershield-socket-test", "status": "stopped", "reason": "Container state is exited."}
+{"timestamp": "2026-10-20T14:08:51+00:00", "type": "health_alert", "container_id": "6153cfb44118", "container_name": "dockpilot-demo-web-1", "status": "stopped", "reason": "Container state is exited."}
+{"timestamp": "2026-10-20T14:08:51+00:00", "type": "health_alert", "container_id": "83790c9405d4", "container_name": "dockpilot-nginx-demo", "status": "stopped", "reason": "Container state is exited."}
+{"timestamp": "2026-10-20T14:08:51+00:00", "type": "health_alert", "container_id": "e6059c030951", "container_name": "thirsty_blackburn", "status": "stopped", "reason": "Container state is exited."}
+{"timestamp": "2026-10-20T14:08:51+00:00", "type": "health_alert", "container_id": "e58c2447ed7a", "container_name": "dockershield-test", "status": "stopped", "reason": "Container state is exited."}
+{"timestamp": "2026-10-20T14:08:51+00:00", "type": "health_alert", "container_id": "bfd50974922c", "container_name": "jenkins-cicd-app-container", "status": "stopped", "reason": "Container state is exited."}
+{"timestamp": "2026-10-20T14:08:51+00:00", "type": "health_alert", "container_id": "b9f0c0450c0e", "container_name": "dockershield-socket-test", "status": "stopped", "reason": "Container state is exited."}

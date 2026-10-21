@@ -1,1 +1,26 @@
-{}
+{
+  "alert:6153cfb44118": {
+    "status": "stopped",
+    "last_seen": "2026-10-21T06:07:12+00:00"
+  },
+  "alert:83790c9405d4": {
+    "status": "stopped",
+    "last_seen": "2026-10-21T06:07:12+00:00"
+  },
+  "alert:e6059c030951": {
+    "status": "stopped",
+    "last_seen": "2026-10-21T06:07:12+00:00"
+  },
+  "alert:e58c2447ed7a": {
+    "status": "stopped",
+    "last_seen": "2026-10-21T06:07:12+00:00"
+  },
+  "alert:bfd50974922c": {
+    "status": "stopped",
+    "last_seen": "2026-10-21T06:07:12+00:00"
+  },
+  "alert:b9f0c0450c0e": {
+    "status": "stopped",
+    "last_seen": "2026-10-21T06:07:12+00:00"
+  }
+}

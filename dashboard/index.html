@@ -313,6 +313,26 @@ tr:last-child td { border-bottom: 0; }
 .nav-icon{width:20px;text-align:center;font-size:16px}.workspace{min-width:0;flex:1;padding:0 22px 24px}.workspace main{max-width:1400px;margin:0 auto}.page-heading{padding:20px 0 4px}.page-heading h1{margin:0 0 6px;font-size:25px}.nav-page{display:none}.nav-page.active{display:block}.nav-page>.panel,.nav-page>section.panel{margin-top:16px}.nav-page .cards{margin-top:14px}
 @media(max-width:800px){.app-shell{display:block}.sidebar{width:100%;height:auto;position:relative;border-right:0;border-bottom:1px solid var(--border);display:flex;gap:5px;overflow-x:auto;padding:10px}.sidebar-label{display:none}.nav-btn{width:auto;min-width:max-content;margin:0;padding:10px}.workspace{padding:0 12px 20px}.workspace main{padding:0}.nav-icon{display:none}}
 
+
+/* Runtime container security audit */
+.runtime-audit-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:14px 0 18px}
+.runtime-audit-card{border:1px solid var(--border);border-radius:10px;padding:15px;background:#0d1728}
+.runtime-audit-label{color:var(--muted);font-size:12px;margin-bottom:8px}
+.runtime-audit-value{font-size:25px;font-weight:750}
+.runtime-container{border:1px solid var(--border);border-radius:10px;padding:15px;margin:12px 0;background:#0d1728}
+.runtime-container-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.runtime-risk{font-size:11px;font-weight:750;border-radius:999px;padding:5px 9px;background:#243247;color:#e2e8f0}
+.runtime-risk.critical{background:#7f1d1d;color:#fecaca}.runtime-risk.high{background:#7c2d12;color:#fed7aa}.runtime-risk.medium{background:#713f12;color:#fef08a}.runtime-risk.low{background:#064e3b;color:#a7f3d0}
+.runtime-finding{border-top:1px solid var(--border);padding:10px 0}.runtime-finding-title{font-weight:700;margin-bottom:5px}.runtime-finding p{margin:4px 0;font-size:13px;overflow-wrap:anywhere}.runtime-audit-muted{color:var(--muted);font-size:13px}
+.runtime-audit-tools{display:flex;gap:10px;flex-wrap:wrap;padding:0 20px 16px;align-items:center}
+.runtime-audit-tools input,.runtime-audit-tools select{background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 12px;min-width:180px}
+.runtime-audit-tools input{flex:1}
+.runtime-finding-details{border-top:1px solid var(--border);padding:10px 0}
+.runtime-finding-details summary{cursor:pointer;font-weight:700;overflow-wrap:anywhere}
+.runtime-finding-details p{margin:8px 0 0;font-size:13px;overflow-wrap:anywhere}
+.runtime-audit-results-count{padding:0 20px 12px;color:var(--muted);font-size:12px}
+
+
 </style>
 
 </head>
@@ -1743,6 +1763,10 @@ setInterval(refreshDockPilotScaling, 10000);
      '<section class="cards"><div class="card"><div class="card-label">Containers checked</div><div class="card-number" id="healthCount">—</div></div><div class="card"><div class="card-label">Stopped / Unhealthy</div><div class="card-number" id="healthProblems">—</div></div><div class="card"><div class="card-label">Healthy</div><div class="card-number" id="healthHealthy">—</div></div></section>'+
      '<section class="panel"><div class="panel-head"><div><h2>Container health status</h2><div class="subtitle">Health checks and recovery are read-only here; automatic recovery remains off.</div></div><button type="button" id="refreshContainerHealthBtn">↻ Refresh health</button></div><div id="containerHealthMessage" class="message">Loading container health…</div><div class="table-wrap"><table><thead><tr><th>Container</th><th>Image</th><th>Docker state</th><th>Health</th><th>Reason</th><th>Recovery</th></tr></thead><tbody id="containerHealthRows"></tbody></table></div></section>'+
      '<section class="panel"><div class="panel-head"><div><h2>Recent health events</h2><div class="subtitle">Stopped/unhealthy alerts and recovery attempts</div></div><button type="button" id="refreshHealthEventsBtn">↻ Refresh events</button></div><div id="healthEventsMessage" class="message">Loading health events…</div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Container</th><th>Event</th><th>Status / Recovery</th><th>Reason</th></tr></thead><tbody id="healthEventRows"></tbody></table></div></section>' ;
+   // Runtime security audit page: populated only from the live Docker audit API.
+   pages.security.innerHTML='<div class="page-heading"><h1>Runtime Container Security</h1><div class="subtitle">Read-only inspection of real Docker container configuration</div></div>'+
+     '<section class="panel"><div class="panel-head"><div><h2>Container security audit</h2><div class="subtitle">Findings are generated from the configured Docker Engine through the DockPilot API. No sample container records are used.</div></div><button type="button" id="refreshRuntimeAuditBtn">↻ Refresh audit</button></div><div id="runtimeAuditMessage" class="message" role="status" style="padding:12px 20px">Waiting to run audit…</div><div class="runtime-audit-cards" style="padding:0 20px"><div class="runtime-audit-card"><div class="runtime-audit-label">Containers scanned</div><div class="runtime-audit-value" id="runtimeAuditScanned">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Containers with findings</div><div class="runtime-audit-value" id="runtimeAuditAffected">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Critical findings</div><div class="runtime-audit-value" id="runtimeAuditCritical">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">High findings</div><div class="runtime-audit-value" id="runtimeAuditHigh">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Medium findings</div><div class="runtime-audit-value" id="runtimeAuditMedium">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Low findings</div><div class="runtime-audit-value" id="runtimeAuditLow">—</div></div></div><div class="runtime-audit-tools"><input id="runtimeAuditSearch" type="search" placeholder="Search container name, ID or image" aria-label="Search containers"><select id="runtimeAuditSeverity" aria-label="Filter findings by severity"><option value="all">All severities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option><option value="none">No findings</option></select><button type="button" id="exportRuntimeAuditBtn">Export JSON</button></div><div id="runtimeAuditResultsCount" class="runtime-audit-results-count">Run an audit to view results.</div><div id="runtimeAuditContainers" style="padding:0 20px 18px"><div class="runtime-audit-muted">Run an audit to inspect container configuration.</div></div></section>';
+
    // Event history page uses persisted history APIs if they are available.
    pages.history.innerHTML='<div class="page-heading"><h1>Event History</h1><div class="subtitle">Persisted autoscaling decisions and outcomes</div></div><section class="panel"><div class="panel-head"><div><h2>Scaling events</h2><div class="subtitle">Latest recorded scaling actions</div></div><button type="button" id="refreshHistoryBtn">↻ Refresh history</button></div><div id="historyMessage" class="message" style="padding:12px 20px">Loading event history…</div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Project / Service</th><th>Action</th><th>Replicas</th><th>Result</th><th>Reason</th></tr></thead><tbody id="historyRows"></tbody></table></div></section>';
    // Historical metrics panel: loads persisted samples from the SQLite history API.
@@ -1755,12 +1779,103 @@ setInterval(refreshDockPilotScaling, 10000);
      if(btn.dataset.page==='history') loadDockPilotHistory();
      if(btn.dataset.page==='health'){loadDockPilotHealth();loadDockPilotHealthEvents();}
    }));
+   document.querySelectorAll('.nav-btn').forEach(btn=>{if(btn.dataset.page==='security')btn.addEventListener('click',loadDockPilotSecurityAudit)});
+   const refreshAudit=document.getElementById('refreshRuntimeAuditBtn'); if(refreshAudit) refreshAudit.addEventListener('click',loadDockPilotSecurityAudit);
+   const auditSearch=document.getElementById('runtimeAuditSearch'); if(auditSearch) auditSearch.addEventListener('input',renderDockPilotSecurityAudit);
+   const auditSeverity=document.getElementById('runtimeAuditSeverity'); if(auditSeverity) auditSeverity.addEventListener('change',renderDockPilotSecurityAudit);
+   const auditExport=document.getElementById('exportRuntimeAuditBtn'); if(auditExport) auditExport.addEventListener('click',exportDockPilotSecurityAudit);
    const refreshHealth=document.getElementById('refreshContainerHealthBtn'); if(refreshHealth) refreshHealth.addEventListener('click',loadDockPilotHealth);
    const refreshHealthEvents=document.getElementById('refreshHealthEventsBtn'); if(refreshHealthEvents) refreshHealthEvents.addEventListener('click',loadDockPilotHealthEvents);
    const refresh=document.getElementById('refreshHistoryBtn'); if(refresh) refresh.addEventListener('click',loadDockPilotHistory);
    const refreshMetrics=document.getElementById('refreshMetricsHistoryBtn'); if(refreshMetrics) refreshMetrics.addEventListener('click',loadDockPilotMetrics);
    document.querySelectorAll('.nav-btn').forEach(btn=>{if(btn.dataset.page==='monitoring')btn.addEventListener('click',loadDockPilotMetrics)});
  }
+ let dockPilotSecurityAuditData = null;
+
+ async function loadDockPilotSecurityAudit(){
+   const msg=document.getElementById('runtimeAuditMessage');
+   const containerBox=document.getElementById('runtimeAuditContainers');
+   if(!msg||!containerBox)return;
+   msg.textContent='Inspecting real Docker container configurations…';
+   containerBox.replaceChildren();
+   try{
+     const response=await fetch('/api/security/container-audit',{cache:'no-store'});
+     let data;
+     try{data=await response.json()}catch{throw new Error('The audit endpoint did not return valid JSON.')}
+     if(!response.ok){const detail=data&&data.detail;throw new Error(typeof detail==='string'?detail:(detail?.message||'Security audit API returned HTTP '+response.status))}
+     if(!data||typeof data!=='object'||!Array.isArray(data.containers))throw new Error('Unexpected audit response. Expected a containers array from the runtime audit API.');
+     dockPilotSecurityAuditData=data;
+     const summary=data.findings_by_severity||data.risk_summary||{};
+     const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=String(value??0)};
+     set('runtimeAuditScanned',data.containers_scanned??data.containers.length);
+     set('runtimeAuditAffected',data.containers_with_findings??data.containers.filter(c=>(c.findings||[]).length>0).length);
+     set('runtimeAuditCritical',summary.critical);set('runtimeAuditHigh',summary.high);set('runtimeAuditMedium',summary.medium);set('runtimeAuditLow',summary.low);
+     const scannedAt=data.checked_at||data.timestamp;
+     msg.textContent='Audit completed against live Docker Engine data. '+(scannedAt?'Checked at '+scannedAt+'. ':'')+(data.read_only===true?'No containers were modified.':'Review findings before making changes.');
+     renderDockPilotSecurityAudit();
+   }catch(error){
+     dockPilotSecurityAuditData=null;
+     msg.textContent='Runtime audit unavailable: '+error.message+'. Confirm that /api/security/container-audit is implemented in manager/main.py and audit_container_security exists in manager/docker_service.py.';
+     const help=document.createElement('div');help.className='security-summary blocked';help.textContent='No security results are being shown because the live audit request failed. The page will not substitute sample findings.';
+     containerBox.replaceChildren(help);
+     const count=document.getElementById('runtimeAuditResultsCount');if(count)count.textContent='No live audit results available.';
+   }
+ }
+
+ function renderDockPilotSecurityAudit(){
+   const data=dockPilotSecurityAuditData;
+   const box=document.getElementById('runtimeAuditContainers');
+   const count=document.getElementById('runtimeAuditResultsCount');
+   if(!data||!box)return;
+   const search=(document.getElementById('runtimeAuditSearch')?.value||'').trim().toLowerCase();
+   const severity=(document.getElementById('runtimeAuditSeverity')?.value||'all').toLowerCase();
+   box.replaceChildren();
+   let shownContainers=0, shownFindings=0;
+   const containers=data.containers.filter(container=>{
+     const haystack=[container.name,container.id,container.image,container.status].filter(Boolean).join(' ').toLowerCase();
+     return haystack.includes(search);
+   });
+   containers.forEach(container=>{
+     const findings=Array.isArray(container.findings)?container.findings:[];
+     const selectedFindings=severity==='all'?findings:findings.filter(f=>String(f.severity||'').toLowerCase()===severity);
+     if(severity==='none'&&findings.length!==0)return;
+     if(severity!=='all'&&severity!=='none'&&selectedFindings.length===0)return;
+     shownContainers++;
+     shownFindings+=selectedFindings.length;
+     const card=document.createElement('article');card.className='runtime-container';
+     const head=document.createElement('div');head.className='runtime-container-head';
+     const identity=document.createElement('div');
+     const name=document.createElement('div');name.className='runtime-finding-title';name.textContent=container.name||container.id||'Unnamed container';identity.appendChild(name);
+     const meta=document.createElement('div');meta.className='runtime-audit-muted';meta.textContent=[container.image||'Image unknown',container.status||'Status unknown',container.id?'ID: '+container.id:''].filter(Boolean).join(' · ');identity.appendChild(meta);head.appendChild(identity);
+     const level=String(container.risk_level||'low').toLowerCase();
+     const risk=document.createElement('span');risk.className='runtime-risk '+(['critical','high','medium','low'].includes(level)?level:'');risk.textContent=String(container.risk_level||'No findings').toUpperCase();head.appendChild(risk);card.appendChild(head);
+     if(!selectedFindings.length){
+       const safe=document.createElement('div');safe.className='runtime-audit-muted';safe.textContent=severity==='none'?'No findings were returned for this container. This is not a guarantee of complete security.':'No findings match this severity filter.';card.appendChild(safe);
+     }
+     selectedFindings.forEach(finding=>{
+       const details=document.createElement('details');details.className='runtime-finding-details';
+       const title=document.createElement('summary');title.textContent='['+String(finding.severity||'INFO').toUpperCase()+'] '+String(finding.check||finding.title||'Security finding');details.appendChild(title);
+       if(finding.message){const desc=document.createElement('p');desc.textContent=String(finding.message);details.appendChild(desc)}
+       if(finding.recommendation){const fix=document.createElement('p');fix.textContent='Recommendation: '+String(finding.recommendation);details.appendChild(fix)}
+       card.appendChild(details);
+     });
+     box.appendChild(card);
+   });
+   if(count)count.textContent='Showing '+shownContainers+' of '+data.containers.length+' containers · '+shownFindings+' matching findings. Export JSON downloads the complete latest audit.';
+   if(!shownContainers){const empty=document.createElement('div');empty.className='runtime-audit-muted';empty.textContent='No containers match the current search and severity filters.';box.appendChild(empty)}
+ }
+
+ function exportDockPilotSecurityAudit(){
+   if(!dockPilotSecurityAuditData){const msg=document.getElementById('runtimeAuditMessage');if(msg)msg.textContent='Run a successful live audit before exporting a report.';return}
+   const blob=new Blob([JSON.stringify(dockPilotSecurityAuditData,null,2)],{type:'application/json'});
+   const url=URL.createObjectURL(blob);
+   const link=document.createElement('a');
+   const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+   link.href=url;link.download='dockpilot-security-audit-'+stamp+'.json';
+   document.body.appendChild(link);link.click();link.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),1000);
+ }
+
  async function loadDockPilotHealth(){
    const msg=document.getElementById('containerHealthMessage'),body=document.getElementById('containerHealthRows');if(!msg||!body)return;
    msg.textContent='Loading container health…';

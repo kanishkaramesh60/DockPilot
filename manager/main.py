@@ -30,6 +30,8 @@ from docker_service import (
     create_container,
     list_networks,
     list_volumes,
+    audit_container_security,
+    get_docker_client,
 )
 
 from metrics_history import (
@@ -37,7 +39,12 @@ from metrics_history import (
     get_metric_history,
     get_scaling_history,
 )
-from container_health import check_containers, get_recent_health_events
+
+from container_health import (
+    check_containers,
+    get_recent_health_events,
+)
+
 
 # --------------------------------------------------
 # REQUEST MODELS
@@ -75,11 +82,19 @@ class ComposeRequest(BaseModel):
 
 app = FastAPI(
     title="DockPilot API",
-    description="Local Docker container management, monitoring, and Compose security",
+    description=(
+        "Local Docker container management, monitoring, "
+        "runtime security auditing, and Compose security"
+    ),
     version="1.0.0",
 )
 
 COMPOSE_ROOT = Path(__file__).resolve().parent.parent / "compose_projects"
+
+
+# --------------------------------------------------
+# HEALTH MONITORING
+# --------------------------------------------------
 
 @app.get("/api/health")
 def container_health_status():
@@ -87,8 +102,9 @@ def container_health_status():
 
 
 @app.get("/api/health/events")
-def container_health_events(limit: int = 100):
+def container_health_events(limit: int = Query(default=100, ge=1, le=1000)):
     return {"items": get_recent_health_events(limit=limit)}
+
 
 # --------------------------------------------------
 # HOME AND HEALTH
@@ -193,6 +209,16 @@ def system_overview():
 
 
 # --------------------------------------------------
+# RUNTIME CONTAINER SECURITY AUDIT
+# --------------------------------------------------
+
+@app.get("/api/security/container-audit")
+def container_security_audit():
+    """Audit real Docker container configuration without modifying containers."""
+    return docker_request(audit_container_security)
+
+
+# --------------------------------------------------
 # IMAGE MANAGEMENT
 # --------------------------------------------------
 
@@ -242,10 +268,7 @@ def volumes():
 # --------------------------------------------------
 
 def _compose_path(project_name: str) -> Path:
-    if not re.fullmatch(
-        r"[a-z0-9][a-z0-9_-]{0,62}",
-        project_name,
-    ):
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", project_name):
         raise HTTPException(
             status_code=400,
             detail="Invalid Compose project name.",
@@ -255,17 +278,11 @@ def _compose_path(project_name: str) -> Path:
 
 
 # --------------------------------------------------
-# PHASE 8: COMPOSE SECURITY
+# COMPOSE SECURITY
 # --------------------------------------------------
 
 def _check_compose_security(compose_yaml: str):
-    """
-    Analyze Compose YAML before validation, saving, or starting.
-
-    High-risk configurations are blocked.
-    Lower-risk findings are returned as warnings.
-    """
-
+    """Analyze Compose YAML before validation, saving, or starting."""
     try:
         report = analyze_compose_security(compose_yaml)
 
@@ -299,14 +316,7 @@ def _run_compose(
     args,
     compose_text: str | None = None,
 ):
-    """
-    Execute Docker Compose without using a shell.
-
-    If compose_text is supplied, save it to the project's persistent
-    Compose file before executing the command. Callers must validate
-    security and Compose syntax before supplying new YAML.
-    """
-
+    """Execute Docker Compose without invoking a shell."""
     if not shutil.which("docker"):
         raise HTTPException(
             status_code=503,
@@ -319,14 +329,8 @@ def _run_compose(
     compose_file = _compose_path(project_name)
 
     if compose_text is not None:
-        compose_file.parent.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-        compose_file.write_text(
-            compose_text,
-            encoding="utf-8",
-        )
+        compose_file.parent.mkdir(parents=True, exist_ok=True)
+        compose_file.write_text(compose_text, encoding="utf-8")
 
     if not compose_file.is_file():
         raise HTTPException(
@@ -363,9 +367,7 @@ def _run_compose(
 
     if result.returncode != 0:
         message = (
-            result.stderr
-            or result.stdout
-            or "Docker Compose failed."
+            result.stderr or result.stdout or "Docker Compose failed."
         ).strip()
 
         raise HTTPException(
@@ -381,11 +383,7 @@ def _run_compose(
 # --------------------------------------------------
 
 def _saved_compose_projects():
-    COMPOSE_ROOT.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
+    COMPOSE_ROOT.mkdir(parents=True, exist_ok=True)
     projects = []
 
     for folder in sorted(COMPOSE_ROOT.iterdir()):
@@ -393,26 +391,20 @@ def _saved_compose_projects():
 
         if (
             folder.is_dir()
-            and re.fullmatch(
-                r"[a-z0-9][a-z0-9_-]{0,62}",
-                folder.name,
-            )
+            and re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", folder.name)
             and compose_file.is_file()
         ):
-            projects.append(
-                {
-                    "name": folder.name,
-                    "config_file": str(compose_file),
-                    "saved": True,
-                }
-            )
+            projects.append({
+                "name": folder.name,
+                "config_file": str(compose_file),
+                "saved": True,
+            })
 
     return projects
 
 
 @app.get("/api/compose/saved")
 def compose_saved():
-    """List saved configurations without changing containers."""
     return _saved_compose_projects()
 
 
@@ -422,11 +414,7 @@ def compose_saved():
 
 @app.post("/api/compose/validate")
 def compose_validate(request: ComposeRequest):
-    """
-    Check security and Docker Compose syntax.
-    Does not create, start, stop, or remove containers.
-    """
-
+    """Validate Compose security and syntax without deploying."""
     security = _check_compose_security(request.compose_yaml)
 
     if not shutil.which("docker"):
@@ -441,13 +429,8 @@ def compose_validate(request: ComposeRequest):
     with tempfile.TemporaryDirectory(
         prefix="dockpilot-compose-validate-"
     ) as temp_dir:
-
         compose_file = Path(temp_dir) / "compose.yaml"
-
-        compose_file.write_text(
-            request.compose_yaml,
-            encoding="utf-8",
-        )
+        compose_file.write_text(request.compose_yaml, encoding="utf-8")
 
         command = [
             "docker",
@@ -504,24 +487,11 @@ def compose_validate(request: ComposeRequest):
 
 @app.post("/api/compose/save")
 def compose_save(request: ComposeRequest):
-    """
-    Validate and save Compose YAML persistently.
-    Does not deploy or change containers.
-    """
-
     validation = compose_validate(request)
-
     compose_file = _compose_path(request.project_name)
 
-    compose_file.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    compose_file.write_text(
-        request.compose_yaml,
-        encoding="utf-8",
-    )
+    compose_file.parent.mkdir(parents=True, exist_ok=True)
+    compose_file.write_text(request.compose_yaml, encoding="utf-8")
 
     return {
         "success": True,
@@ -541,11 +511,6 @@ def compose_save(request: ComposeRequest):
 
 @app.post("/api/compose/up")
 def compose_up(request: ComposeRequest):
-    """
-    Validate security and syntax before deployment.
-    Explicit confirmation is required.
-    """
-
     if not request.confirm:
         raise HTTPException(
             status_code=400,
@@ -555,7 +520,6 @@ def compose_up(request: ComposeRequest):
             ),
         )
 
-    # Validate before persisting the submitted YAML.
     validation = compose_validate(request)
 
     output = _run_compose(
@@ -586,10 +550,7 @@ def compose_start_saved(
     project_name: str,
     confirm: bool = False,
 ):
-    if not re.fullmatch(
-        r"[a-z0-9][a-z0-9_-]{0,62}",
-        project_name,
-    ):
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", project_name):
         raise HTTPException(
             status_code=400,
             detail="Invalid Compose project name.",
@@ -612,15 +573,11 @@ def compose_start_saved(
             detail=f"No saved Compose file exists for '{project_name}'.",
         )
 
-    # Recheck the saved configuration before starting it.
     security = _check_compose_security(
         compose_file.read_text(encoding="utf-8")
     )
 
-    output = _run_compose(
-        project_name,
-        ["up", "-d"],
-    )
+    output = _run_compose(project_name, ["up", "-d"])
 
     return {
         "success": True,
@@ -639,10 +596,7 @@ def compose_stop_saved(
     project_name: str,
     confirm: bool = False,
 ):
-    if not re.fullmatch(
-        r"[a-z0-9][a-z0-9_-]{0,62}",
-        project_name,
-    ):
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", project_name):
         raise HTTPException(
             status_code=400,
             detail="Invalid Compose project name.",
@@ -657,11 +611,7 @@ def compose_stop_saved(
             ),
         )
 
-    # Docker Compose stop does not remove containers, networks, or volumes.
-    output = _run_compose(
-        project_name,
-        ["stop"],
-    )
+    output = _run_compose(project_name, ["stop"])
 
     return {
         "success": True,
@@ -675,32 +625,46 @@ def compose_stop_saved(
 
 
 # --------------------------------------------------
-# PHASE 9: READ-ONLY AUTOSCALING METRICS
+# AUTOSCALING METRICS
 # --------------------------------------------------
 
 @app.get("/api/autoscaling/metrics")
 def autoscaling_metrics(project_name: str, service_name: str):
-    """Read real metrics for one explicitly selected Compose service."""
     if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", project_name):
-        raise HTTPException(status_code=400, detail="Invalid Compose project name.")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid Compose project name.",
+        )
 
     if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", service_name):
-        raise HTTPException(status_code=400, detail="Invalid Compose service name.")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid Compose service name.",
+        )
 
     compose_file = _compose_path(project_name)
+
     if not compose_file.is_file():
-        raise HTTPException(status_code=404, detail="Saved Compose project not found.")
+        raise HTTPException(
+            status_code=404,
+            detail="Saved Compose project not found.",
+        )
 
     try:
         return get_service_metrics(project_name, service_name)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:
-        from docker.errors import DockerException
 
-        if isinstance(exc, DockerException):
-            raise HTTPException(status_code=503, detail=f"Docker Engine error: {exc}") from exc
-        raise
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
+    except DockerException as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Docker Engine error: {exc}",
+        ) from exc
+
 
 @app.get("/api/autoscaling/status")
 def autoscaling_status():
@@ -711,13 +675,18 @@ def autoscaling_status():
 def enable_autoscaling(project_name: str, service_name: str):
     try:
         return autoscaling_controller.enable(project_name, service_name)
+
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
 
 
 @app.post("/api/autoscaling/disable")
 def disable_autoscaling():
     return autoscaling_controller.disable()
+
 
 # --------------------------------------------------
 # DETECT REAL COMPOSE PROJECTS
@@ -726,8 +695,6 @@ def disable_autoscaling():
 @app.get("/api/compose/projects")
 def compose_projects():
     """List Compose projects detected from real Docker container labels."""
-    from docker_service import get_docker_client
-
     client = None
 
     try:
@@ -736,10 +703,7 @@ def compose_projects():
 
         for container in client.containers.list(all=True):
             labels = container.labels or {}
-
-            project = labels.get(
-                "com.docker.compose.project"
-            )
+            project = labels.get("com.docker.compose.project")
 
             if not project:
                 continue
@@ -754,33 +718,32 @@ def compose_projects():
                 },
             )
 
-            entry["containers"].append(
-                {
-                    "name": container.name,
-                    "id": container.short_id,
-                    "status": container.status,
-                    "service": labels.get(
-                        "com.docker.compose.service",
-                        "unknown",
-                    ),
-                }
-            )
+            entry["containers"].append({
+                "name": container.name,
+                "id": container.short_id,
+                "status": container.status,
+                "service": labels.get(
+                    "com.docker.compose.service",
+                    "unknown",
+                ),
+            })
 
             if container.status == "running":
                 entry["running"] += 1
             else:
                 entry["stopped"] += 1
 
-        return sorted(
-            projects.values(),
-            key=lambda item: item["name"],
-        )
+        return sorted(projects.values(), key=lambda item: item["name"])
 
     finally:
         if client is not None:
             client.close()
 
-# Initialize persistent metrics and scaling history.
+
+# --------------------------------------------------
+# PERSISTENT METRICS AND SCALING HISTORY
+# --------------------------------------------------
+
 initialize_history()
 
 
@@ -788,7 +751,7 @@ initialize_history()
 def autoscaling_metric_history(
     project_name: str = "dockpilot-scaled-demo",
     service_name: str = "web",
-    limit: int = 100,
+    limit: int = Query(default=100, ge=1, le=1000),
 ):
     return {
         "items": get_metric_history(
@@ -802,7 +765,7 @@ def autoscaling_metric_history(
 @app.get("/api/autoscaling/history/events")
 def autoscaling_event_history(
     project_name: str | None = None,
-    limit: int = 100,
+    limit: int = Query(default=100, ge=1, le=1000),
 ):
     return {
         "items": get_scaling_history(
