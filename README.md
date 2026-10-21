@@ -13,7 +13,7 @@
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-![Tests](https://img.shields.io/badge/tests-72%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![pytest](https://img.shields.io/badge/pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)
 
 <br>
 
@@ -41,9 +41,6 @@
 - [Use Cases](#-use-cases)
 - [Limitations](#-limitations)
 - [Future Improvements](#-future-improvements)
-- [Project Status](#-project-status)
-- [Author](#-author)
-- [License](#-license)
 
 ---
 
@@ -242,14 +239,11 @@ dockpilot/
 │   ├── test_security_audit_history.py
 │   └── ...
 │
-├── data/
-│   └── security_audit_history.db
-│
 ├── pytest.ini
 └── README.md
 ```
 
-> **Note:** This is a representative structure. The SQLite database is created or used at runtime, depending on the configured database path.
+> **Note:** This is a representative structure. The SQLite audit history database is created at runtime, depending on the configured database path.
 
 ---
 
@@ -279,9 +273,7 @@ python -m venv .venv
 
 ### 3️⃣ Install dependencies
 
-Install the packages listed in your project's dependency file (for example `requirements.txt`), if present.
-
-> 💡 If your repository has no dependency file yet, create one from the packages the project actually uses before publishing.
+Install the packages listed in the project's dependency file (for example `requirements.txt`).
 
 ### 4️⃣ Start Docker Desktop and verify access
 
@@ -292,8 +284,10 @@ docker ps -a
 
 ### 5️⃣ Start the DockPilot backend
 
+From the project root:
+
 ```cmd
-cd /d D:\CyberProjects\dockpilot\manager
+cd manager
 ..\.venv\Scripts\python.exe -m uvicorn main:app --reload --host 127.0.0.1 --port 8001
 ```
 
@@ -317,8 +311,6 @@ DockPilot uses **pytest** to validate API behavior, security rules, autoscaling 
 .venv\Scripts\python.exe -m pytest -v
 ```
 
-### ✅ Verified Result: **72 tests passed**
-
 <details>
 <summary><b>What the tests cover</b></summary>
 
@@ -336,8 +328,6 @@ DockPilot uses **pytest** to validate API behavior, security rules, autoscaling 
 - Security audit-history retrieval and persistence
 
 </details>
-
-The reported run also included one non-fatal Starlette/httpx deprecation warning.
 
 > Passing tests validate the covered code paths. Manual verification against the configured Docker Engine is still recommended.
 
@@ -392,33 +382,3 @@ Possible extensions (not yet claimed as implemented):
 - [ ] Packaging for easier installation
 - [ ] Improved operational logging and diagnostics
 - [ ] Additional security reporting and documentation
-
----
-
-## 📌 Project Status
-
-DockPilot has a **working dashboard** and a reported automated test suite with **72 passing tests**, bringing Docker resource management, monitoring, Compose support, autoscaling logic, container health monitoring, and security audit history into one interface.
-
-**Current priorities:** preserve working functionality, complete manual integration verification, fix genuine defects, and prepare the project for demonstration.
-
----
-
-## 👨‍💻 Author
-
-**Your Name** — *Add your preferred name here*
-**GitHub:** [Add your profile link](https://github.com/YOUR_GITHUB_USERNAME)
-**Project:** DockPilot — Docker Container Management and Security Dashboard
-
----
-
-## 📄 License
-
-Add a license before distributing the project publicly. The [MIT License](https://choosealicense.com/licenses/mit/) is a common choice if its terms suit your intended use.
-
----
-
-<div align="center">
-
-**If you find DockPilot useful, consider giving the repo a ⭐**
-
-</div>
