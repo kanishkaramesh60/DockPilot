@@ -45,6 +45,13 @@ from container_health import (
     get_recent_health_events,
 )
 
+from security_audit_history import (
+    initialize_security_audit_history,
+    save_security_audit,
+    list_security_audits,
+    get_security_audit,
+)
+
 
 # --------------------------------------------------
 # REQUEST MODELS
@@ -214,8 +221,32 @@ def system_overview():
 
 @app.get("/api/security/container-audit")
 def container_security_audit():
-    """Audit real Docker container configuration without modifying containers."""
-    return docker_request(audit_container_security)
+    """Run a read-only audit and save its report for historical comparison."""
+    report = docker_request(audit_container_security)
+    saved = save_security_audit(report)
+    return {**report, "audit_id": saved["id"], "audited_at": saved["audited_at"]}
+
+
+# --------------------------------------------------
+# SECURITY AUDIT HISTORY
+# --------------------------------------------------
+
+initialize_security_audit_history()
+
+
+@app.get("/api/security/audit-history")
+def security_audit_history(limit: int = Query(default=50, ge=1, le=500)):
+    """List saved audit summaries, newest first."""
+    return {"items": list_security_audits(limit=limit)}
+
+
+@app.get("/api/security/audit-history/{audit_id}")
+def security_audit_history_detail(audit_id: int):
+    """Read a previously saved audit report without rerunning the audit."""
+    saved = get_security_audit(audit_id)
+    if saved is None:
+        raise HTTPException(status_code=404, detail="Security audit history item not found.")
+    return saved
 
 
 # --------------------------------------------------
