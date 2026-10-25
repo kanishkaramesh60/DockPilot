@@ -1,0 +1,579 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DockPilot | Container Management</title>
+<style>
+:root {
+    color-scheme: dark;
+    --bg: #0b1120;
+    --panel: #121c30;
+    --border: #26354c;
+    --text: #e8eef8;
+    --muted: #9aabc2;
+    --blue: #38bdf8;
+    --green: #34d399;
+    --red: #fb7185;
+    --yellow: #fbbf24;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", Arial, sans-serif;
+}
+header {
+    padding: 24px 5%;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.brand { font-size: 26px; font-weight: 750; letter-spacing: -.7px; }
+.brand span { color: var(--blue); }
+.subtitle { color: var(--muted); margin-top: 5px; font-size: 13px; }
+main { max-width: 1400px; margin: auto; padding: 28px 5%; }
+.topline {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 22px;
+}
+h1 { font-size: 24px; margin: 0 0 6px; }
+p { color: var(--muted); }
+button {
+    border: 1px solid var(--border);
+    background: #1b2a42;
+    color: var(--text);
+    border-radius: 8px;
+    padding: 9px 13px;
+    cursor: pointer;
+    font-size: 13px;
+}
+button:hover { border-color: var(--blue); }
+button:disabled { opacity: .5; cursor: wait; }
+.primary { background: #075985; border-color: #0284c7; }
+.danger { color: #fecdd3; }
+.cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.card, .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+.card { padding: 20px; }
+.card-label { color: var(--muted); font-size: 13px; }
+.card-number { font-size: 30px; font-weight: 700; margin-top: 10px; }
+.panel { overflow: hidden; margin-bottom: 24px; }
+.panel-head {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between;
+    align-items: center; flex-wrap: wrap; gap: 12px;
+}
+.panel-head h2 { margin: 0; font-size: 17px; }
+#search {
+    background: #0b1120; color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; min-width: 220px;
+}
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th, td {
+    padding: 15px 18px; border-bottom: 1px solid var(--border);
+    font-size: 13px; white-space: nowrap;
+}
+th { color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+.name { font-weight: 650; }
+.image { color: var(--muted); margin-top: 5px; font-size: 12px; }
+.status {
+    display: inline-block; border-radius: 20px;
+    padding: 5px 9px; font-size: 11px; font-weight: 650;
+    background: #26354c; color: #cbd5e1;
+}
+.status.running { background: #064e3b; color: #a7f3d0; }
+.status.exited { background: #3f2931; color: #fecdd3; }
+.status.paused { background: #513e12; color: #fde68a; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.actions button { padding: 7px 9px; }
+.message { padding: 22px; color: var(--muted); text-align: center; }
+.error { color: #fda4af; }
+pre {
+    padding: 16px; overflow: auto; max-height: 400px;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    color: #cbd5e1; background: #080d18; margin: 0;
+}
+.footer { color: var(--muted); font-size: 12px; text-align: center; padding: 20px; }
+@media(max-width: 700px) {
+    .cards { grid-template-columns: 1fr; }
+    header, main { padding-left: 18px; padding-right: 18px; }
+    #search { min-width: 0; width: 100%; }
+    .panel-head { align-items: stretch; }
+}
+
+/* Phase 9: Compose security results */
+.security-results {
+    margin: 0 20px 18px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #0d1728;
+}
+
+.security-results h3 {
+    margin: 0 0 10px;
+    font-size: 15px;
+}
+
+.security-summary {
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.security-summary.safe {
+    background: #064e3b;
+    color: #a7f3d0;
+}
+
+.security-summary.blocked {
+    background: #4c1d2b;
+    color: #fecdd3;
+}
+
+.security-summary.warning {
+    background: #513e12;
+    color: #fde68a;
+}
+
+.security-summary.neutral {
+    background: #1b2a42;
+    color: var(--text);
+}
+
+.security-findings {
+    display: grid;
+    gap: 10px;
+}
+
+.security-finding {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    overflow-wrap: anywhere;
+}
+
+.security-finding-title {
+    font-weight: 650;
+    margin-bottom: 6px;
+}
+
+.security-meta {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.security-recommendation {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #cbd5e1;
+    overflow-wrap: anywhere;
+}
+
+.security-empty {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+</style>
+</head>
+<body>
+<header>
+    <div>
+        <div class="brand">Dock<span>Pilot</span></div>
+        <div class="subtitle">Intelligent Docker Container Management</div>
+    </div>
+    <button class="primary" id="refreshBtn" onclick="loadContainers()">
+        ↻ Refresh containers
+    </button>
+</header>
+
+<main>
+    <div class="topline">
+        <div>
+            <h1>Container Overview</h1>
+            <div class="subtitle" id="lastUpdated">Connecting to Docker Engine...</div>
+        </div>
+        <span class="status" id="connectionStatus">Checking connection</span>
+    </div>
+
+    <section class="cards">
+        <div class="card">
+            <div class="card-label">Total containers</div>
+            <div class="card-number" id="totalCount">—</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Running</div>
+            <div class="card-number" id="runningCount">—</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Stopped / Other</div>
+            <div class="card-number" id="otherCount">—</div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <h2>Your Docker containers</h2>
+            <input id="search" type="search"
+                placeholder="Search name, ID or image..."
+                oninput="renderContainers()">
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Container</th>
+                        <th>Status</th>
+                        <th>Container ID</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="containerRows">
+                    <tr><td colspan="4" class="message">Loading real Docker data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="listMessage" class="message" hidden></div>
+    </section>
+
+    <section class="panel" id="outputPanel" hidden>
+        <div class="panel-head">
+            <h2 id="outputTitle">Container output</h2>
+            <button onclick="document.getElementById('outputPanel').hidden=true">
+                Close
+            </button>
+        </div>
+        <pre id="outputContent"></pre>
+    </section>
+
+    <div class="footer">
+        Data is fetched from your configured Docker Engine through the DockPilot API.
+        This dashboard does not use sample container records.
+    </div>
+</main>
+
+<script>
+let containers = [];
+let busy = false;
+
+function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+function statusClass(status) {
+    const value = String(status || "").toLowerCase();
+    if (value === "running") return "running";
+    if (value === "exited" || value === "dead") return "exited";
+    if (value === "paused") return "paused";
+    return "";
+}
+
+async function api(url, options = {}) {
+    const response = await fetch(url, options);
+    const text = await response.text();
+    let data;
+
+    try { data = JSON.parse(text); }
+    catch { data = text; }
+
+    if (!response.ok) {
+        const detail = data && data.detail
+            ? data.detail
+            : (typeof data === "string" ? data : response.statusText);
+        throw new Error(detail || `HTTP ${response.status}`);
+    }
+    return data;
+}
+
+async function loadContainers() {
+    if (busy) return;
+    const refreshBtn = document.getElementById("refreshBtn");
+    refreshBtn.disabled = true;
+
+    try {
+        const data = await api("/api/containers");
+        containers = Array.isArray(data) ? data : data.containers;
+
+        if (!Array.isArray(containers)) {
+            throw new Error("The API returned an unexpected container list.");
+        }
+
+        document.getElementById("connectionStatus").textContent = "Docker connected";
+        document.getElementById("connectionStatus").className = "status running";
+        document.getElementById("lastUpdated").textContent =
+            "Last updated: " + new Date().toLocaleTimeString();
+
+        document.getElementById("totalCount").textContent = containers.length;
+        document.getElementById("runningCount").textContent =
+            containers.filter(c => c.status === "running").length;
+        document.getElementById("otherCount").textContent =
+            containers.filter(c => c.status !== "running").length;
+
+        renderContainers();
+    } catch (error) {
+        document.getElementById("connectionStatus").textContent = "Connection error";
+        document.getElementById("connectionStatus").className = "status exited";
+        document.getElementById("lastUpdated").textContent = error.message;
+        document.getElementById("containerRows").innerHTML =
+            '<tr><td colspan="4" class="message error">' +
+            escapeHtml(error.message) + '</td></tr>';
+        document.getElementById("totalCount").textContent = "—";
+        document.getElementById("runningCount").textContent = "—";
+        document.getElementById("otherCount").textContent = "—";
+    } finally {
+        refreshBtn.disabled = false;
+    }
+}
+
+function renderContainers() {
+    const query = document.getElementById("search").value.trim().toLowerCase();
+    const filtered = containers.filter(c =>
+        [c.name, c.id, c.image, c.status].some(value =>
+            String(value ?? "").toLowerCase().includes(query)
+        )
+    );
+
+    const rows = document.getElementById("containerRows");
+    document.getElementById("listMessage").hidden = true;
+
+    if (filtered.length === 0) {
+        rows.innerHTML = "";
+        const message = document.getElementById("listMessage");
+        message.textContent = containers.length === 0
+            ? "No containers were found in this Docker Engine."
+            : "No containers match your search.";
+        message.hidden = false;
+        return;
+    }
+
+    rows.innerHTML = filtered.map(c => {
+        const id = escapeHtml(c.id);
+        const name = escapeHtml(c.name);
+        const image = escapeHtml(c.image);
+        const status = escapeHtml(c.status);
+        const running = c.status === "running";
+
+        return `<tr>
+            <td>
+                <div class="name">${name}</div>
+                <div class="image">${image}</div>
+            </td>
+            <td><span class="status ${statusClass(c.status)}">${status}</span></td>
+            <td>${id}</td>
+            <td><div class="actions">
+                ${!running
+                    ? `<button onclick="containerAction('${id}','start')">Start</button>`
+                    : `<button onclick="containerAction('${id}','stop')">Stop</button>`}
+                <button onclick="containerAction('${id}','restart')">Restart</button>
+                <button onclick="showDetails('${id}')">Details</button>
+                <button onclick="showLogs('${id}')">Logs</button>
+            </div></td>
+        </tr>`;
+    }).join("");
+}
+
+async function containerAction(id, action) {
+    const container = containers.find(c => c.id === id);
+    if (!container) return;
+
+    if (action === "stop" || action === "restart") {
+        if (!confirm(`${action.toUpperCase()} container "${container.name}"?`)) {
+            return;
+        }
+    }
+
+    busy = true;
+    try {
+        await api(`/api/containers/${encodeURIComponent(id)}/${action}`, {
+            method: "POST"
+        });
+        await loadContainers();
+        alert(`Docker accepted the ${action} request for ${container.name}.`);
+    } catch (error) {
+        alert(`Could not ${action} container: ${error.message}`);
+    } finally {
+        busy = false;
+    }
+}
+
+async function showDetails(id) {
+    showOutput("Container details", "Loading details...");
+    try {
+        const data = await api(`/api/containers/${encodeURIComponent(id)}`);
+        document.getElementById("outputContent").textContent =
+            JSON.stringify(data, null, 2);
+    } catch (error) {
+        document.getElementById("outputContent").textContent = error.message;
+    }
+}
+
+async function showLogs(id) {
+    showOutput("Container logs", "Loading logs...");
+    try {
+        const data = await api(
+            `/api/containers/${encodeURIComponent(id)}/logs?tail=100`
+        );
+        document.getElementById("outputContent").textContent = data.logs || "(No logs returned.)";
+    } catch (error) {
+        document.getElementById("outputContent").textContent = error.message;
+    }
+}
+
+function showOutput(title, content) {
+    document.getElementById("outputTitle").textContent = title;
+    document.getElementById("outputContent").textContent = content;
+    document.getElementById("outputPanel").hidden = false;
+    document.getElementById("outputPanel").scrollIntoView({ behavior: "smooth" });
+}
+
+loadContainers();
+setInterval(loadContainers, 10000);
+</script>
+
+<section id="autoscaling-panel" style="margin:24px;padding:24px;border:1px solid #444;border-radius:12px;">
+  <h2>Automatic Scaling</h2>
+  <p>Project: <strong>dockpilot-scaled-demo</strong></p>
+  <p>Service: <strong>web</strong></p>
+
+  <p>Status: <strong id="as-status">Loading...</strong></p>
+  <p>Running replicas: <strong id="as-replicas">--</strong></p>
+  <p>Average CPU: <strong id="as-cpu">--</strong></p>
+  <p>Scaling policy: CPU above 70% to scale up; below 20% to scale down.</p>
+
+  <button onclick="enableDockPilotScaling()">Enable Autoscaling</button>
+  <button onclick="disableDockPilotScaling()">Disable Autoscaling</button>
+  <button onclick="refreshDockPilotScaling()">Refresh</button>
+
+  <p id="as-message" role="status"></p>
+  <h3>Recent Scaling Events</h3>
+  <ul id="as-events">
+    <li>No events loaded.</li>
+  </ul>
+</section>
+
+<script>
+async function refreshDockPilotScaling() {
+  const message = document.getElementById("as-message");
+
+  try {
+    const [statusResponse, metricsResponse] = await Promise.all([
+      fetch("/api/autoscaling/status"),
+      fetch("/api/autoscaling/metrics?project_name=dockpilot-scaled-demo&service_name=web")
+    ]);
+
+    if (!statusResponse.ok || !metricsResponse.ok) {
+      throw new Error("Could not load autoscaling data. Check the API.");
+    }
+
+    const status = await statusResponse.json();
+    const metrics = await metricsResponse.json();
+
+    document.getElementById("as-status").textContent =
+      status.status || (status.enabled ? "Enabled" : "Disabled");
+
+    document.getElementById("as-replicas").textContent =
+      metrics.running_replicas ?? "--";
+
+    document.getElementById("as-cpu").textContent =
+      metrics.average_cpu_percent == null
+        ? "Waiting for metrics"
+        : Number(metrics.average_cpu_percent).toFixed(2) + "%";
+
+    const events = document.getElementById("as-events");
+    events.replaceChildren();
+
+    (status.events || []).slice(0, 10).forEach(event => {
+      const item = document.createElement("li");
+      item.textContent = `${event.timestamp || ""} ${event.message || ""}`;
+      events.appendChild(item);
+    });
+
+    if (!events.children.length) {
+      const item = document.createElement("li");
+      item.textContent = "No scaling events yet.";
+      events.appendChild(item);
+    }
+
+    message.textContent = status.last_error
+      ? "Controller error: " + status.last_error
+      : "";
+  } catch (error) {
+    message.textContent = error.message;
+  }
+}
+
+async function enableDockPilotScaling() {
+  const message = document.getElementById("as-message");
+
+  try {
+    const response = await fetch(
+      "/api/autoscaling/enable?project_name=dockpilot-scaled-demo&service_name=web",
+      { method: "POST" }
+    );
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.detail || "Failed to enable autoscaling.");
+    }
+
+    message.textContent = "Autoscaling enabled.";
+    await refreshDockPilotScaling();
+  } catch (error) {
+    message.textContent = error.message;
+  }
+}
+
+async function disableDockPilotScaling() {
+  const message = document.getElementById("as-message");
+
+  try {
+    const response = await fetch("/api/autoscaling/disable", {
+      method: "POST"
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.detail || "Failed to disable autoscaling.");
+    }
+
+    message.textContent = "Autoscaling disabled.";
+    await refreshDockPilotScaling();
+  } catch (error) {
+    message.textContent = error.message;
+  }
+}
+
+refreshDockPilotScaling();
+setInterval(refreshDockPilotScaling, 10000);
+</script>
+
+</body>
+</html>

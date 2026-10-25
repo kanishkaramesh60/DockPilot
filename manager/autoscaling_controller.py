@@ -47,29 +47,42 @@ class AutoscalingController:
             })
             self.events = self.events[:50]
 
+  
     def _load_safe_service(self, project_name, service_name):
         path = COMPOSE_ROOT / project_name / "compose.yaml"
 
         if not path.is_file():
-            raise ValueError("Saved Compose project was not found.")
+            raise ValueError(
+                f"Saved Compose project was not found: {path}"
+            )
 
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         services = data.get("services", {})
 
-        if service_name not in services:
-            raise ValueError("Service does not exist in the Compose file.")
+        if not isinstance(services, dict) or service_name not in services:
+            raise ValueError(
+                f"Service '{service_name}' does not exist in {path}"
+            )
 
         service = services[service_name]
 
-        if service.get("container_name"):
+        if not isinstance(service, dict):
             raise ValueError(
-                "Scaling is blocked: remove container_name from this service."
+                f"Invalid configuration for service '{service_name}'."
             )
 
-        if service.get("ports"):
+        if service.get("container_name"):
             raise ValueError(
-                "Scaling is blocked: this service declares ports. "
-                "Use a reverse proxy/load balancer and internal service networking."
+                f"Scaling is blocked for '{service_name}': "
+                "remove container_name from this service."
+            )
+
+        ports = service.get("ports") or []
+        if ports:
+            raise ValueError(
+                f"Scaling is blocked for '{service_name}': "
+                f"it declares published ports: {ports}. "
+                "Scale an internal service behind a reverse proxy."
             )
 
         return path
