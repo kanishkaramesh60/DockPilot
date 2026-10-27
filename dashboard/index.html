@@ -466,9 +466,9 @@ tr:last-child td { border-bottom: 0; }
 .nav-btn[data-page="storage"]    .nav-icon::before { -webkit-mask-image: var(--i-database); mask-image: var(--i-database); }
 .nav-btn[data-page="security"]   .nav-icon::before { -webkit-mask-image: var(--i-shield);   mask-image: var(--i-shield); }
 .nav-btn[data-page="monitoring"] .nav-icon::before { -webkit-mask-image: var(--i-activity); mask-image: var(--i-activity); }
-.nav-btn[data-page="autoscaling"] .nav-icon::before { -webkit-mask-image: var(--i-trend);   mask-image: var(--i-trend); }
 .nav-btn[data-page="health"]     .nav-icon::before { -webkit-mask-image: var(--i-heart);    mask-image: var(--i-heart); }
 .nav-btn[data-page="history"]    .nav-icon::before { -webkit-mask-image: var(--i-clock);    mask-image: var(--i-clock); }
+.nav-btn[data-page="resilience"] .nav-icon::before { -webkit-mask-image: var(--i-alert); mask-image: var(--i-alert); }
 
 .workspace { min-width: 0; flex: 1; padding: 0 28px 32px; }
 .workspace main { max-width: 1400px; margin: 0 auto; }
@@ -558,35 +558,6 @@ tr:last-child td { border-bottom: 0; }
 .runtime-finding-details p { margin: 8px 0 0 22px; font-size: 13px; overflow-wrap: anywhere; }
 .runtime-audit-results-count { padding: 0 20px 12px; color: var(--muted); font-size: 12px; }
 
-/* ---------- Autoscaling panel (inline-styled in the markup) ---------- */
-#autoscaling-panel {
-    max-width: none !important;
-    width: 100% !important;
-    margin: 16px 0 !important;
-    padding: 0 22px 22px !important;
-}
-#autoscaling-panel .panel-head { margin: 0 -22px; padding: 18px 22px; }
-#autoscaling-panel select { padding: 11px 12px !important; }
-#autoscaling-panel label > span { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
-#autoscaling-panel div[style*="padding: 16px"] {
-    position: relative; overflow: hidden;
-    border-radius: 14px !important;
-    padding: 18px !important;
-    background: linear-gradient(180deg, #0f1c33, #0a1425);
-    border-color: var(--line-soft) !important;
-}
-#autoscaling-panel div[style*="padding: 16px"]::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 2px; background: linear-gradient(90deg, var(--accent), transparent 85%); }
-#autoscaling-panel div[style*="padding: 16px"] strong { display: block; margin-top: 8px; font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
-#autoscaling-panel h3 { font-size: 15px; letter-spacing: -.01em; }
-#as-message { color: var(--muted); }
-#as-events { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 8px; }
-#as-events li {
-    padding: 11px 14px;
-    border: 1px solid var(--line-soft); border-left: 3px solid var(--accent);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, .02);
-    font-family: "JetBrains Mono", Consolas, monospace; font-size: 12px; color: #cbd5e1;
-}
 
 /* ---------- Responsive ---------- */
 @media (max-width: 800px) {
@@ -656,8 +627,8 @@ tr:last-child td { border-bottom: 0; }
 <button class="nav-btn" data-page="storage"><span class="nav-icon">⌘</span>Networks &amp; Volumes</button>
 <button class="nav-btn" data-page="security"><span class="nav-icon">◇</span>Security</button>
 <button class="nav-btn" data-page="monitoring"><span class="nav-icon">⌁</span>Monitoring</button>
-<button class="nav-btn" data-page="autoscaling"><span class="nav-icon">↗</span>Autoscaling</button>
 <button class="nav-btn" data-page="health"><span class="nav-icon">♥</span>Health Monitor</button>
+<button class="nav-btn" data-page="resilience"><span class="nav-icon">⚡</span>Resilience Lab</button>
 <button class="nav-btn" data-page="history"><span class="nav-icon">◷</span>Event History</button>
 </nav>
 <div class="workspace">
@@ -1881,221 +1852,9 @@ setInterval(loadVolumes, 30000);
 
 </script>
 
-<section id="autoscaling-panel" class="panel" style="
-    max-width: 1100px;
-    width: calc(100% - 40px);
-    margin: 32px auto;
-    padding: 20px;
-    box-sizing: border-box;
-">
-  <div class="panel-head" style="
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-  ">
-    <h2>Automatic Scaling</h2>
-    <button onclick="refreshDockPilotScaling()">Refresh</button>
-  </div>
-
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:20px 0;">
-    <label style="display:flex;flex-direction:column;gap:8px;">
-      <span>Compose Project</span>
-      <select id="as-project" style="padding:10px;border:1px solid var(--border,#263449);border-radius:8px;background:var(--surface,#111827);color:inherit;">
-        <option value="">Loading projects...</option>
-      </select>
-    </label>
-    <label style="display:flex;flex-direction:column;gap:8px;">
-      <span>Service</span>
-      <select id="as-service" style="padding:10px;border:1px solid var(--border,#263449);border-radius:8px;background:var(--surface,#111827);color:inherit;" disabled>
-        <option value="">Select a project first</option>
-      </select>
-    </label>
-  </div>
-
-  <div style="
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 14px;
-      margin: 20px 0;
-  ">
-    <div style="padding: 16px; border: 1px solid var(--border, #263449); border-radius: 10px;">
-      <div style="color: var(--muted, #94a3b8); font-size: 13px;">Controller Status</div>
-      <strong id="as-status">Loading...</strong>
-    </div>
-
-    <div style="padding: 16px; border: 1px solid var(--border, #263449); border-radius: 10px;">
-      <div style="color: var(--muted, #94a3b8); font-size: 13px;">Running Replicas</div>
-      <strong id="as-replicas">--</strong>
-    </div>
-
-    <div style="padding: 16px; border: 1px solid var(--border, #263449); border-radius: 10px;">
-      <div style="color: var(--muted, #94a3b8); font-size: 13px;">Average CPU</div>
-      <strong id="as-cpu">--</strong>
-    </div>
-  </div>
-
-  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-    <button onclick="enableDockPilotScaling()">Enable Autoscaling</button>
-    <button onclick="disableDockPilotScaling()">Disable Autoscaling</button>
-  </div>
-
-  <p id="as-message" role="status" style="margin-top: 12px;"></p>
-
-  <h3 style="margin-top: 24px;">Recent Scaling Events</h3>
-  <ul id="as-events">
-    <li>Loading events...</li>
-  </ul>
-</section>
-
-<script>
-(() => {
-  const projectSelect = document.getElementById("as-project");
-  const serviceSelect = document.getElementById("as-service");
-  const message = document.getElementById("as-message");
-  let detectedProjects = [];
-  let busy = false;
-
-  function projectName(project) {
-    return typeof project === "string" ? project : (project?.name || project?.project_name || "");
-  }
-
-  function servicesFor(project) {
-    const found = new Set();
-    (project?.containers || []).forEach(container => {
-      const service = container?.service || container?.labels?.["com.docker.compose.service"] || container?.Labels?.["com.docker.compose.service"];
-      if (service && service !== "unknown") found.add(service);
-    });
-    (project?.services || []).forEach(item => {
-      const service = typeof item === "string" ? item : (item?.name || item?.service);
-      if (service) found.add(service);
-    });
-    return [...found].sort();
-  }
-
-  function resetMetrics() {
-    document.getElementById("as-status").textContent = "Select a target";
-    document.getElementById("as-replicas").textContent = "--";
-    document.getElementById("as-cpu").textContent = "--";
-    document.getElementById("as-events").replaceChildren();
-    const li = document.createElement("li"); li.textContent = "Select a project and service to view metrics.";
-    document.getElementById("as-events").appendChild(li);
-  }
-
-  function populateServices(preferred = "") {
-    const project = detectedProjects.find(p => projectName(p) === projectSelect.value);
-    const services = servicesFor(project);
-    serviceSelect.replaceChildren();
-    if (!services.length) {
-      serviceSelect.add(new Option("No services detected", ""));
-      serviceSelect.disabled = true;
-      resetMetrics();
-      message.textContent = "No Compose services were found for this project.";
-      return;
-    }
-    services.forEach(service => serviceSelect.add(new Option(service, service)));
-    serviceSelect.value = services.includes(preferred) ? preferred : services[0];
-    serviceSelect.disabled = false;
-    message.textContent = "";
-  }
-
-  async function loadScalingProjects() {
-    const previousProject = projectSelect.value;
-    const previousService = serviceSelect.value;
-    projectSelect.disabled = true;
-    serviceSelect.disabled = true;
-    try {
-      const data = await api("/api/compose/projects");
-      detectedProjects = Array.isArray(data) ? data : (Array.isArray(data?.projects) ? data.projects : []);
-      projectSelect.replaceChildren();
-      const usable = detectedProjects.filter(p => projectName(p));
-      if (!usable.length) {
-        projectSelect.add(new Option("No Compose projects detected", ""));
-        serviceSelect.replaceChildren(new Option("No services available", ""));
-        message.textContent = "Start a Compose project before configuring autoscaling.";
-        resetMetrics();
-        return;
-      }
-      usable.forEach(p => projectSelect.add(new Option(projectName(p), projectName(p))));
-      projectSelect.value = usable.some(p => projectName(p) === previousProject) ? previousProject : projectName(usable[0]);
-      populateServices(previousService);
-    } catch (error) {
-      projectSelect.replaceChildren(new Option("Could not load projects", ""));
-      serviceSelect.replaceChildren(new Option("Unavailable", ""));
-      message.textContent = "Could not load Compose projects: " + error.message;
-    } finally {
-      projectSelect.disabled = false;
-    }
-  }
-
-  async function refreshDockPilotScaling() {
-    if (busy) return;
-    const project = projectSelect.value;
-    const service = serviceSelect.value;
-    if (!project || !service) {
-      message.textContent = "Select a Compose project and service first.";
-      return;
-    }
-    busy = true;
-    try {
-      const params = new URLSearchParams({project_name: project, service_name: service});
-      const [status, metrics] = await Promise.all([
-        api("/api/autoscaling/status"),
-        api("/api/autoscaling/metrics?" + params.toString())
-      ]);
-      document.getElementById("as-status").textContent = status.status || (status.enabled ? "Enabled" : "Disabled");
-      document.getElementById("as-replicas").textContent = metrics.running_replicas ?? "--";
-      document.getElementById("as-cpu").textContent = metrics.average_cpu_percent == null ? "Waiting for CPU metrics" : Number(metrics.average_cpu_percent).toFixed(2) + "%";
-      const list = document.getElementById("as-events");
-      list.replaceChildren();
-      (status.events || []).slice(0, 10).forEach(event => {
-        const li = document.createElement("li");
-        li.textContent = `${event.timestamp || ""} ${event.message || event.action || ""}`.trim();
-        list.appendChild(li);
-      });
-      if (!list.children.length) {
-        const li = document.createElement("li"); li.textContent = "No scaling events yet."; list.appendChild(li);
-      }
-      message.textContent = status.last_error ? "Controller error: " + status.last_error : "";
-    } catch (error) {
-      message.textContent = "Autoscaling refresh failed: " + error.message;
-    } finally { busy = false; }
-  }
-
-  async function sendScalingRequest(url) {
-    try {
-      const result = await api(url, {method: "POST"});
-      message.textContent = result?.message || result?.status || "Autoscaling request completed.";
-      await refreshDockPilotScaling();
-    } catch (error) { message.textContent = "Autoscaling request failed: " + error.message; }
-  }
-
-  async function enableDockPilotScaling() {
-    const project = projectSelect.value, service = serviceSelect.value;
-    if (!project || !service) { message.textContent = "Select a Compose project and service first."; return; }
-    const params = new URLSearchParams({project_name: project, service_name: service});
-    await sendScalingRequest("/api/autoscaling/enable?" + params.toString());
-  }
-
-  async function disableDockPilotScaling() {
-    await sendScalingRequest("/api/autoscaling/disable");
-  }
-
-  projectSelect.addEventListener("change", () => { populateServices(); refreshDockPilotScaling(); });
-  serviceSelect.addEventListener("change", refreshDockPilotScaling);
-  window.refreshDockPilotScaling = refreshDockPilotScaling;
-  window.enableDockPilotScaling = enableDockPilotScaling;
-  window.disableDockPilotScaling = disableDockPilotScaling;
-  loadScalingProjects().then(refreshDockPilotScaling);
-  setInterval(refreshDockPilotScaling, 10000);
-})();
-</script>
-
-
 <script>
 (function(){
- const pageNames={overview:'Overview',containers:'Containers',images:'Images',compose:'Compose Projects',storage:'Networks & Volumes',security:'Security',monitoring:'Monitoring',autoscaling:'Autoscaling',health:'Health Monitor',history:'Event History'};
+ const pageNames={overview:'Overview',containers:'Containers',images:'Images',compose:'Compose Projects',storage:'Networks & Volumes',security:'Security',monitoring:'Monitoring',health:'Health Monitor',resilience:'Resilience Lab',history:'Event History'};
  function setupDockPilotNavigation(){
    const main=document.querySelector('.workspace main'); if(!main || main.dataset.navReady==='1') return;
    main.dataset.navReady='1';
@@ -2122,7 +1881,7 @@ setInterval(loadVolumes, 30000);
    // Keep container output globally visible when opened by existing actions.
    if(output) main.appendChild(output);
    if(footer) main.appendChild(footer);
-   const auto=document.getElementById('autoscaling-panel'); if(auto) pages.autoscaling.appendChild(auto);
+
    // Existing monitoring charts are identified by their chart canvases and moved together with their containing panel.
    const chart=main.querySelector('#cpuChart');
    if(chart){let p=chart.closest('section.panel')||chart.closest('.panel'); if(p && !p.closest('.nav-page')) move(p,'monitoring');}
@@ -2131,13 +1890,53 @@ setInterval(loadVolumes, 30000);
      '<section class="cards"><div class="card"><div class="card-label">Containers checked</div><div class="card-number" id="healthCount">—</div></div><div class="card"><div class="card-label">Stopped / Unhealthy</div><div class="card-number" id="healthProblems">—</div></div><div class="card"><div class="card-label">Healthy</div><div class="card-number" id="healthHealthy">—</div></div></section>'+
      '<section class="panel"><div class="panel-head"><div><h2>Container health status</h2><div class="subtitle">Health checks and recovery are read-only here; automatic recovery remains off.</div></div><button type="button" id="refreshContainerHealthBtn">↻ Refresh health</button></div><div id="containerHealthMessage" class="message">Loading container health…</div><div class="table-wrap"><table><thead><tr><th>Container</th><th>Image</th><th>Docker state</th><th>Health</th><th>Reason</th><th>Recovery</th></tr></thead><tbody id="containerHealthRows"></tbody></table></div></section>'+
      '<section class="panel"><div class="panel-head"><div><h2>Recent health events</h2><div class="subtitle">Stopped/unhealthy alerts and recovery attempts</div></div><button type="button" id="refreshHealthEventsBtn">↻ Refresh events</button></div><div id="healthEventsMessage" class="message">Loading health events…</div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Container</th><th>Event</th><th>Status / Recovery</th><th>Reason</th></tr></thead><tbody id="healthEventRows"></tbody></table></div></section>' ;
+   // Resilience Lab: experiments are restricted to explicitly labelled, running test containers.
+   pages.resilience.innerHTML='<div class="page-heading"><h1>Resilience Lab</h1><div class="subtitle">Run controlled recovery experiments only against containers explicitly labelled dockpilot.chaos=allowed.</div></div>'+ 
+     '<section class="panel"><div class="panel-head"><div><h2>Experiment safety</h2><div class="subtitle">Only disposable test containers should be eligible. Production containers must never be labelled for chaos testing.</div></div><button type="button" id="refreshResilienceBtn">↻ Refresh lab</button></div>'+ 
+     '<div style="padding:18px 20px"><div class="security-summary warning">Safety gate: an experiment is allowed only when Docker reports the container as running and its label is <code>dockpilot.chaos=allowed</code>.</div>'+ 
+     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:16px"><div><label for="resilienceContainerSelect" style="display:block;color:var(--muted);margin-bottom:7px">Eligible test container</label><select id="resilienceContainerSelect" style="width:100%;padding:11px"><option value="">Loading eligible containers…</option></select></div>'+ 
+     '<div><label for="resilienceExperimentType" style="display:block;color:var(--muted);margin-bottom:7px">Experiment</label><select id="resilienceExperimentType" style="width:100%;padding:11px"><option value="restart">Stop and recover (restart)</option></select></div></div>'+ 
+     '<label style="display:flex;gap:10px;align-items:flex-start;margin:16px 0;color:var(--muted)"><input id="resilienceConfirm" type="checkbox" style="margin-top:4px"><span>I confirm this is a disposable test container and understand the experiment may interrupt its service.</span></label>'+ 
+     '<button type="button" class="primary" id="runResilienceExperimentBtn" disabled>Run recovery experiment</button><span id="resilienceActionMessage" class="message" role="status" style="display:inline-block;padding:10px 12px">Choose an eligible container to begin.</span></div></section>'+ 
+     '<section class="panel"><div class="panel-head"><div><h2>Experiment result</h2><div class="subtitle">Latest outcome returned by the API</div></div></div><div id="resilienceResult" class="message">No experiment has been run in this session.</div></section>'+ 
+     '<section class="panel"><div class="panel-head"><div><h2>Experiment history</h2><div class="subtitle">Persisted results from the Resilience Lab API</div></div><button type="button" id="refreshResilienceHistoryBtn">↻ Refresh history</button></div><div id="resilienceHistoryMessage" class="message">Loading experiment history…</div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Container</th><th>Experiment</th><th>Result</th><th>Recovery</th><th>Details</th></tr></thead><tbody id="resilienceHistoryRows"></tbody></table></div></section>';
+   async function loadResilienceEligible(){
+     const select=document.getElementById('resilienceContainerSelect'), msg=document.getElementById('resilienceActionMessage'), run=document.getElementById('runResilienceExperimentBtn');
+     if(!select)return;
+     select.innerHTML='<option value="">Loading eligible containers…</option>'; run.disabled=true;
+     try{const r=await fetch('/api/resilience/eligible'); if(!r.ok)throw new Error('API returned '+r.status); const data=await r.json(); const items=Array.isArray(data)?data:(data.items||data.containers||[]); select.innerHTML='<option value="">Select a test container</option>';
+       items.forEach(c=>{const id=c.container_id||c.id||c.short_id||''; if(!id)return; const opt=document.createElement('option');opt.value=id;opt.textContent=(c.container_name||c.name||id)+' — '+(c.status||'unknown');select.appendChild(opt)});
+       if(!items.length){msg.textContent='No eligible containers found. Create/start a disposable test container with label dockpilot.chaos=allowed, then refresh.';}else{msg.textContent='Eligible containers loaded. Confirm the safety checkbox to enable the experiment.';}
+     }catch(err){select.innerHTML='<option value="">Could not load eligible containers</option>';msg.textContent='Could not load eligible containers. Check that the DockPilot API is running and GET /api/resilience/eligible is available.';}
+     updateResilienceRunButton();
+   }
+   function updateResilienceRunButton(){const s=document.getElementById('resilienceContainerSelect'), c=document.getElementById('resilienceConfirm'), b=document.getElementById('runResilienceExperimentBtn'); if(s&&c&&b)b.disabled=!(s.value&&c.checked);}
+   async function loadResilienceHistory(){
+     const body=document.getElementById('resilienceHistoryRows'), msg=document.getElementById('resilienceHistoryMessage');if(!body||!msg)return;msg.textContent='Loading experiment history…';body.innerHTML='';
+     try{const r=await fetch('/api/resilience/history');if(!r.ok)throw new Error('API returned '+r.status);const data=await r.json();const items=Array.isArray(data)?data:(data.items||data.history||[]);if(!items.length){msg.textContent='No experiments recorded yet.';return;}
+       items.forEach(e=>{const tr=document.createElement('tr');const vals=[e.timestamp||e.created_at||'—',e.container_name||e.container_id||'—',e.experiment_type||e.experiment||e.action||'—',e.success===true?'Success':e.success===false?'Failed':e.status||'Recorded',e.recovery_status||e.recovery||'—',e.message||e.reason||e.error||'—'];vals.forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.appendChild(td)});body.appendChild(tr)});msg.textContent='Showing '+items.length+' recorded experiment(s).';
+     }catch(err){msg.textContent='Could not load history. Check GET /api/resilience/history on the DockPilot API.';}
+   }
+   async function runResilienceExperiment(){
+     const select=document.getElementById('resilienceContainerSelect'),confirmBox=document.getElementById('resilienceConfirm'),btn=document.getElementById('runResilienceExperimentBtn'),msg=document.getElementById('resilienceActionMessage'),result=document.getElementById('resilienceResult');
+     if(!select||!select.value||!confirmBox.checked){msg.textContent='Select a container and confirm the safety warning first.';return;}
+     if(!window.confirm('Run a recovery experiment on '+select.options[select.selectedIndex].text+'? This may interrupt the container.'))return;
+     btn.disabled=true;msg.textContent='Running recovery experiment…';result.textContent='Experiment in progress…';
+     try{const r=await fetch('/api/resilience/experiments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({container_id:select.value,confirm:true})});let data={};try{data=await r.json()}catch(_){data={detail:'The API returned a non-JSON response.'}}
+       if(!r.ok)throw new Error(data.detail||data.message||('API returned '+r.status));result.textContent=JSON.stringify(data,null,2);msg.textContent='Experiment request completed. Review the result and history below.';await loadResilienceHistory();await loadResilienceEligible();
+     }catch(err){result.textContent='Experiment was not confirmed as successful: '+err.message;msg.textContent='Request failed or was blocked. Review the API response and backend logs.';}
+     finally{updateResilienceRunButton();}
+   }
+   document.addEventListener('change',e=>{if(e.target&&['resilienceContainerSelect','resilienceConfirm'].includes(e.target.id))updateResilienceRunButton()});
+   document.addEventListener('click',e=>{if(!e.target)return;if(e.target.id==='refreshResilienceBtn'){loadResilienceEligible();loadResilienceHistory()}if(e.target.id==='refreshResilienceHistoryBtn')loadResilienceHistory();if(e.target.id==='runResilienceExperimentBtn')runResilienceExperiment();if(e.target.id==='openResilienceFromHistory')document.querySelector('[data-page="resilience"]')?.click()});
+   loadResilienceEligible();loadResilienceHistory();
    // Runtime security audit page: populated only from the live Docker audit API.
    pages.security.innerHTML='<div class="page-heading"><h1>Runtime Container Security</h1><div class="subtitle">Read-only inspection of real Docker container configuration</div></div>'+
      '<section class="panel"><div class="panel-head"><div><h2>Container security audit</h2><div class="subtitle">Findings are generated from the configured Docker Engine through the DockPilot API. No sample container records are used.</div></div><button type="button" id="refreshRuntimeAuditBtn">↻ Refresh audit</button></div><div id="runtimeAuditMessage" class="message" role="status" style="padding:12px 20px">Waiting to run audit…</div><div class="runtime-audit-cards" style="padding:0 20px"><div class="runtime-audit-card"><div class="runtime-audit-label">Containers scanned</div><div class="runtime-audit-value" id="runtimeAuditScanned">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Containers with findings</div><div class="runtime-audit-value" id="runtimeAuditAffected">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Critical findings</div><div class="runtime-audit-value" id="runtimeAuditCritical">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">High findings</div><div class="runtime-audit-value" id="runtimeAuditHigh">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Medium findings</div><div class="runtime-audit-value" id="runtimeAuditMedium">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Low findings</div><div class="runtime-audit-value" id="runtimeAuditLow">—</div></div></div><div class="runtime-audit-tools"><input id="runtimeAuditSearch" type="search" placeholder="Search container name, ID or image" aria-label="Search containers"><select id="runtimeAuditSeverity" aria-label="Filter findings by severity"><option value="all">All severities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option><option value="none">No findings</option></select><button type="button" id="exportRuntimeAuditBtn">Export JSON</button></div><div id="runtimeAuditResultsCount" class="runtime-audit-results-count">Run an audit to view results.</div><div id="runtimeAuditContainers" style="padding:0 20px 18px"><div class="runtime-audit-muted">Run an audit to inspect container configuration.</div></div></section>'+
      '<section class="panel"><div class="panel-head"><div><h2>Security Audit History</h2><div class="subtitle">Previously saved read-only audit reports. Refreshing history does not run a new audit.</div></div><button type="button" id="refreshSecurityAuditHistoryBtn">↻ Refresh history</button></div><div id="securityAuditHistoryMessage" class="message" style="padding:12px 20px">Loading saved audit history…</div><div style="padding:12px 20px"><div class="chart-title">Finding trends across recent audits</div><div class="chart-subtitle">Severity totals per saved audit, oldest to newest</div><canvas id="securityAuditHistoryChart" class="chart-canvas" style="height:220px" aria-label="Security audit severity trends"></canvas></div><div class="table-wrap"><table><thead><tr><th>Audit time</th><th>Scanned</th><th>With findings</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th><th>Total findings</th><th>Report</th></tr></thead><tbody id="securityAuditHistoryRows"><tr><td colspan="9" class="message">Loading saved reports…</td></tr></tbody></table></div><div id="securityAuditReportView" style="padding:16px 20px;display:none"><div class="panel-head" style="padding:0 0 12px;border:0"><h3 style="margin:0;font-size:15px" id="securityAuditReportTitle">Saved audit report</h3><button type="button" id="closeSecurityAuditReportBtn">Close report</button></div><pre id="securityAuditReportContent" class="output-content" style="max-height:420px"></pre></div></section>';
 
    // Event history page uses persisted history APIs if they are available.
-   pages.history.innerHTML='<div class="page-heading"><h1>Event History</h1><div class="subtitle">Persisted autoscaling decisions and outcomes</div></div><section class="panel"><div class="panel-head"><div><h2>Scaling events</h2><div class="subtitle">Latest recorded scaling actions</div></div><button type="button" id="refreshHistoryBtn">↻ Refresh history</button></div><div id="historyMessage" class="message" style="padding:12px 20px">Loading event history…</div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Project / Service</th><th>Action</th><th>Replicas</th><th>Result</th><th>Reason</th></tr></thead><tbody id="historyRows"></tbody></table></div></section>';
+   pages.history.innerHTML='<div class="page-heading"><h1>Event History</h1><div class="subtitle">Recent Docker and Resilience Lab events</div></div><section class="panel"><div class="panel-head"><div><h2>Resilience experiment history</h2><div class="subtitle">Open Resilience Lab to run experiments and review persisted outcomes.</div></div><button type="button" id="openResilienceFromHistory">Open Resilience Lab</button></div><div class="message">Experiment history is available in the Resilience Lab page.</div></section>';
    // Historical metrics panel: loads persisted samples from the SQLite history API.
    const metricsPanel=document.createElement('section');metricsPanel.className='panel';metricsPanel.innerHTML='<div class="panel-head"><div><h2>Historical resource usage</h2><div class="subtitle">CPU and memory samples saved by the autoscaling controller</div></div><button type="button" id="refreshMetricsHistoryBtn">↻ Refresh metrics</button></div><div style="padding:16px 20px"><div id="metricsHistoryMessage" class="message" style="padding:10px 0">Loading historical metrics…</div><div style="width:100%;height:280px;position:relative"><canvas id="dockpilotMetricsHistoryChart" aria-label="Historical CPU and memory usage chart" style="width:100%;height:280px"></canvas></div></div>';
    pages.monitoring.appendChild(metricsPanel);

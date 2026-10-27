@@ -1,0 +1,32 @@
+[
+  {
+    "container_id": "31670f4309ea",
+    "container_name": "dockpilot-chaos-test",
+    "started_at": "2026-10-27T04:28:00.754796+00:00",
+    "finished_at": "2026-10-27T04:28:01.660944+00:00",
+    "outcome": "recovered",
+    "recovery_verified": true,
+    "recovery_seconds": 0.843,
+    "message": "Container returned to running state. Application health has not been verified."
+  },
+  {
+    "container_id": "31670f4309ea",
+    "container_name": "dockpilot-chaos-test",
+    "started_at": "2026-10-27T04:27:00.419420+00:00",
+    "finished_at": "2026-10-27T04:27:01.503249+00:00",
+    "outcome": "recovered",
+    "recovery_verified": true,
+    "recovery_seconds": 1.024,
+    "message": "Container returned to running state. Application health has not been verified."
+  },
+  {
+    "container_id": "31670f4309ea",
+    "container_name": "dockpilot-chaos-test",
+    "started_at": "2026-10-25T13:20:52.773496+00:00",
+    "finished_at": "2026-10-25T13:20:53.870283+00:00",
+    "outcome": "recovered",
+    "recovery_verified": true,
+    "recovery_seconds": 0.967,
+    "message": "Container returned to running state. Application health has not been verified."
+  }
+]

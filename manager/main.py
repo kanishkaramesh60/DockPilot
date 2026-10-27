@@ -1,17 +1,15 @@
 
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import tempfile
+from pathlib import Path
+from time import monotonic
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from docker.errors import DockerException, NotFound, APIError
-
-from autoscaling_service import get_service_metrics
-from autoscaling_controller import autoscaling_controller
 
 from compose_security import (
     ComposeSecurityError,
@@ -34,12 +32,6 @@ from docker_service import (
     get_docker_client,
 )
 
-from metrics_history import (
-    initialize_history,
-    get_metric_history,
-    get_scaling_history,
-)
-
 from container_health import (
     check_containers,
     get_recent_health_events,
@@ -50,6 +42,14 @@ from security_audit_history import (
     save_security_audit,
     list_security_audits,
     get_security_audit,
+)
+
+from resilience_lab import (
+    is_eligible_container,
+    validate_experiment_target,
+    save_experiment,
+    get_experiment_history,
+    utc_now,
 )
 
 
@@ -83,6 +83,11 @@ class ComposeRequest(BaseModel):
     confirm: bool = False
 
 
+class ResilienceExperimentRequest(BaseModel):
+    container_id: str = Field(min_length=1, max_length=128)
+    confirm: bool = False
+
+
 # --------------------------------------------------
 # APPLICATION
 # --------------------------------------------------
@@ -91,7 +96,8 @@ app = FastAPI(
     title="DockPilot API",
     description=(
         "Local Docker container management, monitoring, "
-        "runtime security auditing, and Compose security"
+        "runtime security auditing, Compose security, "
+        "and controlled resilience experiments."
     ),
     version="1.0.0",
 )
@@ -109,8 +115,176 @@ def container_health_status():
 
 
 @app.get("/api/health/events")
-def container_health_events(limit: int = Query(default=100, ge=1, le=1000)):
+def container_health_events(
+    limit: int = Query(default=100, ge=1, le=1000),
+):
     return {"items": get_recent_health_events(limit=limit)}
+
+
+# --------------------------------------------------
+# RESILIENCE LAB
+# --------------------------------------------------
+
+@app.get("/api/resilience/eligible")
+def resilience_eligible_containers():
+    """List running containers explicitly opted into experiments."""
+    client = None
+
+    try:
+        client = get_docker_client()
+        eligible = []
+
+        for container in client.containers.list(all=True):
+            container.reload()
+
+            if (
+                is_eligible_container(container)
+                and container.status == "running"
+            ):
+                eligible.append({
+                    "id": container.short_id,
+                    "name": container.name,
+                    "status": container.status,
+                    "eligible": True,
+                })
+
+        return {"items": eligible}
+
+    except DockerException as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not query Docker Engine: {exc}",
+        ) from exc
+
+    finally:
+        if client is not None:
+            client.close()
+
+
+@app.get("/api/resilience/history")
+def resilience_experiment_history(
+    limit: int = Query(default=50, ge=1, le=500),
+):
+    """Return recent Resilience Lab experiment records."""
+    return {"items": get_experiment_history(limit)}
+
+
+@app.post("/api/resilience/experiments")
+def run_resilience_experiment(
+    request: ResilienceExperimentRequest,
+):
+    """
+    Stop and restart an explicitly opted-in container.
+
+    Use only disposable test containers. This operation can interrupt
+    service. Runtime recovery does not prove application health.
+    """
+    if not request.confirm:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Explicit confirmation is required before "
+                "running an experiment."
+            ),
+        )
+
+    client = None
+    start_clock = None
+
+    record = {
+        "container_id": request.container_id,
+        "container_name": "",
+        "started_at": utc_now(),
+        "finished_at": None,
+        "outcome": "failed",
+        "recovery_verified": False,
+        "recovery_seconds": None,
+        "message": "",
+    }
+
+    try:
+        client = get_docker_client()
+        container = client.containers.get(request.container_id)
+        container.reload()
+
+        target = validate_experiment_target(container)
+
+        record["container_id"] = target["container_id"]
+        record["container_name"] = target["container_name"]
+
+        # Start measuring immediately before the disruptive operation.
+        start_clock = monotonic()
+        container.stop(timeout=5)
+
+        # Always attempt a restart after a successful stop.
+        try:
+            container.start()
+            container.reload()
+
+            if container.status != "running":
+                raise RuntimeError(
+                    "Docker did not report the container as running "
+                    "after restart."
+                )
+
+            record["outcome"] = "recovered"
+            record["recovery_verified"] = True
+            record["recovery_seconds"] = round(
+                monotonic() - start_clock, 3
+            )
+            record["message"] = (
+                "Container returned to running state. "
+                "Application health has not been verified."
+            )
+
+        except Exception as recovery_error:
+            record["message"] = (
+                "Recovery could not be verified. Check the container "
+                "manually. Details: "
+                f"{recovery_error}"
+            )
+            raise HTTPException(
+                status_code=503,
+                detail=record["message"],
+            ) from recovery_error
+
+        record["finished_at"] = utc_now()
+        save_experiment(record)
+        return record
+
+    except HTTPException:
+        if record["finished_at"] is None:
+            record["finished_at"] = utc_now()
+            if not record["message"]:
+                record["message"] = "Experiment was not completed."
+            save_experiment(record)
+        raise
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
+    except NotFound as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="Experiment target was not found in Docker Engine.",
+        ) from exc
+
+    except DockerException as exc:
+        record["finished_at"] = utc_now()
+        record["message"] = f"Docker operation failed: {exc}"
+        save_experiment(record)
+
+        raise HTTPException(
+            status_code=503,
+            detail=record["message"],
+        ) from exc
+
+    finally:
+        if client is not None:
+            client.close()
 
 
 # --------------------------------------------------
@@ -186,7 +360,9 @@ def container_logs(
 ):
     return {
         "container_id": container_id,
-        "logs": docker_request(get_container_logs, container_id, tail),
+        "logs": docker_request(
+            get_container_logs, container_id, tail
+        ),
     }
 
 
@@ -221,10 +397,15 @@ def system_overview():
 
 @app.get("/api/security/container-audit")
 def container_security_audit():
-    """Run a read-only audit and save its report for historical comparison."""
+    """Run a read-only audit and save it for historical comparison."""
     report = docker_request(audit_container_security)
     saved = save_security_audit(report)
-    return {**report, "audit_id": saved["id"], "audited_at": saved["audited_at"]}
+
+    return {
+        **report,
+        "audit_id": saved["id"],
+        "audited_at": saved["audited_at"],
+    }
 
 
 # --------------------------------------------------
@@ -235,17 +416,24 @@ initialize_security_audit_history()
 
 
 @app.get("/api/security/audit-history")
-def security_audit_history(limit: int = Query(default=50, ge=1, le=500)):
+def security_audit_history(
+    limit: int = Query(default=50, ge=1, le=500),
+):
     """List saved audit summaries, newest first."""
     return {"items": list_security_audits(limit=limit)}
 
 
 @app.get("/api/security/audit-history/{audit_id}")
 def security_audit_history_detail(audit_id: int):
-    """Read a previously saved audit report without rerunning the audit."""
+    """Read a saved audit without rerunning it."""
     saved = get_security_audit(audit_id)
+
     if saved is None:
-        raise HTTPException(status_code=404, detail="Security audit history item not found.")
+        raise HTTPException(
+            status_code=404,
+            detail="Security audit history item not found.",
+        )
+
     return saved
 
 
@@ -299,7 +487,10 @@ def volumes():
 # --------------------------------------------------
 
 def _compose_path(project_name: str) -> Path:
-    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", project_name):
+    if not re.fullmatch(
+        r"[a-z0-9][a-z0-9_-]{0,62}",
+        project_name,
+    ):
         raise HTTPException(
             status_code=400,
             detail="Invalid Compose project name.",
@@ -328,8 +519,9 @@ def _check_compose_security(compose_yaml: str):
             status_code=400,
             detail={
                 "message": (
-                    "Compose security validation blocked this configuration. "
-                    "Fix the high-risk settings before saving or deploying."
+                    "Compose security validation blocked this "
+                    "configuration. Fix high-risk settings before "
+                    "saving or deploying."
                 ),
                 "security": report,
             },
@@ -361,7 +553,10 @@ def _run_compose(
 
     if compose_text is not None:
         compose_file.parent.mkdir(parents=True, exist_ok=True)
-        compose_file.write_text(compose_text, encoding="utf-8")
+        compose_file.write_text(
+            compose_text,
+            encoding="utf-8",
+        )
 
     if not compose_file.is_file():
         raise HTTPException(
@@ -398,7 +593,9 @@ def _run_compose(
 
     if result.returncode != 0:
         message = (
-            result.stderr or result.stdout or "Docker Compose failed."
+            result.stderr
+            or result.stdout
+            or "Docker Compose failed."
         ).strip()
 
         raise HTTPException(
@@ -422,7 +619,10 @@ def _saved_compose_projects():
 
         if (
             folder.is_dir()
-            and re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", folder.name)
+            and re.fullmatch(
+                r"[a-z0-9][a-z0-9_-]{0,62}",
+                folder.name,
+            )
             and compose_file.is_file()
         ):
             projects.append({
@@ -445,7 +645,7 @@ def compose_saved():
 
 @app.post("/api/compose/validate")
 def compose_validate(request: ComposeRequest):
-    """Validate Compose security and syntax without deploying."""
+    """Validate security and syntax without deploying."""
     security = _check_compose_security(request.compose_yaml)
 
     if not shutil.which("docker"):
@@ -461,7 +661,10 @@ def compose_validate(request: ComposeRequest):
         prefix="dockpilot-compose-validate-"
     ) as temp_dir:
         compose_file = Path(temp_dir) / "compose.yaml"
-        compose_file.write_text(request.compose_yaml, encoding="utf-8")
+        compose_file.write_text(
+            request.compose_yaml,
+            encoding="utf-8",
+        )
 
         command = [
             "docker",
@@ -505,8 +708,8 @@ def compose_validate(request: ComposeRequest):
         "valid": True,
         "project_name": request.project_name,
         "message": (
-            "Compose file is valid and passed high-risk security checks. "
-            "No containers were created or changed."
+            "Compose file is valid and passed high-risk security "
+            "checks. No containers were created or changed."
         ),
         "security": security,
     }
@@ -522,7 +725,10 @@ def compose_save(request: ComposeRequest):
     compose_file = _compose_path(request.project_name)
 
     compose_file.parent.mkdir(parents=True, exist_ok=True)
-    compose_file.write_text(request.compose_yaml, encoding="utf-8")
+    compose_file.write_text(
+        request.compose_yaml,
+        encoding="utf-8",
+    )
 
     return {
         "success": True,
@@ -581,7 +787,10 @@ def compose_start_saved(
     project_name: str,
     confirm: bool = False,
 ):
-    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", project_name):
+    if not re.fullmatch(
+        r"[a-z0-9][a-z0-9_-]{0,62}",
+        project_name,
+    ):
         raise HTTPException(
             status_code=400,
             detail="Invalid Compose project name.",
@@ -627,7 +836,10 @@ def compose_stop_saved(
     project_name: str,
     confirm: bool = False,
 ):
-    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", project_name):
+    if not re.fullmatch(
+        r"[a-z0-9][a-z0-9_-]{0,62}",
+        project_name,
+    ):
         raise HTTPException(
             status_code=400,
             detail="Invalid Compose project name.",
@@ -656,76 +868,12 @@ def compose_stop_saved(
 
 
 # --------------------------------------------------
-# AUTOSCALING METRICS
-# --------------------------------------------------
-
-@app.get("/api/autoscaling/metrics")
-def autoscaling_metrics(project_name: str, service_name: str):
-    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", project_name):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid Compose project name.",
-        )
-
-    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", service_name):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid Compose service name.",
-        )
-
-    compose_file = _compose_path(project_name)
-
-    if not compose_file.is_file():
-        raise HTTPException(
-            status_code=404,
-            detail="Saved Compose project not found.",
-        )
-
-    try:
-        return get_service_metrics(project_name, service_name)
-
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail=str(exc),
-        ) from exc
-
-    except DockerException as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Docker Engine error: {exc}",
-        ) from exc
-
-
-@app.get("/api/autoscaling/status")
-def autoscaling_status():
-    return autoscaling_controller.get_status()
-
-
-@app.post("/api/autoscaling/enable")
-def enable_autoscaling(project_name: str, service_name: str):
-    try:
-        return autoscaling_controller.enable(project_name, service_name)
-
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail=str(exc),
-        ) from exc
-
-
-@app.post("/api/autoscaling/disable")
-def disable_autoscaling():
-    return autoscaling_controller.disable()
-
-
-# --------------------------------------------------
 # DETECT REAL COMPOSE PROJECTS
 # --------------------------------------------------
 
 @app.get("/api/compose/projects")
 def compose_projects():
-    """List Compose projects detected from real Docker container labels."""
+    """List Compose projects using real Docker container labels."""
     client = None
 
     try:
@@ -764,43 +912,17 @@ def compose_projects():
             else:
                 entry["stopped"] += 1
 
-        return sorted(projects.values(), key=lambda item: item["name"])
+        return sorted(
+            projects.values(),
+            key=lambda item: item["name"],
+        )
+
+    except DockerException as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not query Docker Engine: {exc}",
+        ) from exc
 
     finally:
         if client is not None:
             client.close()
-
-
-# --------------------------------------------------
-# PERSISTENT METRICS AND SCALING HISTORY
-# --------------------------------------------------
-
-initialize_history()
-
-
-@app.get("/api/autoscaling/history/metrics")
-def autoscaling_metric_history(
-    project_name: str = "dockpilot-scaled-demo",
-    service_name: str = "web",
-    limit: int = Query(default=100, ge=1, le=1000),
-):
-    return {
-        "items": get_metric_history(
-            project_name,
-            service_name,
-            limit,
-        )
-    }
-
-
-@app.get("/api/autoscaling/history/events")
-def autoscaling_event_history(
-    project_name: str | None = None,
-    limit: int = Query(default=100, ge=1, le=1000),
-):
-    return {
-        "items": get_scaling_history(
-            project_name=project_name,
-            limit=limit,
-        )
-    }

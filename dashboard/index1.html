@@ -1,15 +1,34 @@
 
+
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>DockPilot | Container Management</title>
+
+<meta name="theme-color" content="#070b14">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+/* ==========================================================
+   DockPilot visual theme
+   Appearance only: every class name and id used by the page's
+   JavaScript is preserved.
+   ========================================================== */
+
 :root {
     color-scheme: dark;
-    --bg: #0b1120;
-    --panel: #121c30;
+
+    /* original tokens (kept: the JS charts rely on these hues) */
+    --bg: #070b14;
+    --panel: #0f1829;
     --border: #26354c;
     --text: #e8eef8;
     --muted: #9aabc2;
@@ -17,46 +36,165 @@
     --green: #34d399;
     --red: #fb7185;
     --yellow: #fbbf24;
+
+    /* new tokens */
+    --accent: #38bdf8;
+    --accent-2: #818cf8;
+    --orange: #fb923c;
+    --line-soft: rgba(48, 66, 98, .62);
+    --card-bg: linear-gradient(180deg, rgba(22, 34, 58, .88), rgba(13, 21, 37, .92));
+    --shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 14px 34px rgba(0, 0, 0, .38);
+    --header-h: 84px;
+
+    /* icons (used as masks, so they take the colour of the element) */
+    --i-grid: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'/%3E%3C/svg%3E");
+    --i-box: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 8l-9-5-9 5v8l9 5 9-5zM3.3 7.5L12 12.5l8.7-5M12 22V12.5'/%3E%3C/svg%3E");
+    --i-layers: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l9 5-9 5-9-5zM3 12.5l9 5 9-5M3 16.5l9 5 9-5'/%3E%3C/svg%3E");
+    --i-compose: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 4h16v6H4zM4 14h7v6H4zM15 14h5v6h-5z'/%3E%3C/svg%3E");
+    --i-database: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6'/%3E%3C/svg%3E");
+    --i-shield: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'/%3E%3C/svg%3E");
+    --i-activity: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12h4l3-8 4 16 3-8h4'/%3E%3C/svg%3E");
+    --i-trend: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 17l6-6 4 4 8-8M15 7h6v6'/%3E%3C/svg%3E");
+    --i-heart: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.8 5.6a5 5 0 00-7.1 0L12 7.3l-1.7-1.7a5 5 0 00-7.1 7.1L12 21.5l8.8-8.8a5 5 0 000-7.1z'/%3E%3C/svg%3E");
+    --i-clock: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2'/%3E%3C/svg%3E");
+    --i-play: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4.5v15l12-7.5z'/%3E%3C/svg%3E");
+    --i-pause: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 5v14M16 5v14'/%3E%3C/svg%3E");
+    --i-server: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 5h16v5H4zM4 14h16v5H4zM8 7.5h.01M8 16.5h.01'/%3E%3C/svg%3E");
+    --i-globe: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18'/%3E%3C/svg%3E");
+    --i-alert: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l10 18H2zM12 10v5M12 18h.01'/%3E%3C/svg%3E");
+    --i-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 100 18 9 9 0 000-18zM8 12l3 3 5-6'/%3E%3C/svg%3E");
+    --i-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aabc2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 4a7 7 0 100 14 7 7 0 000-14zM21 21l-4.5-4.5'/%3E%3C/svg%3E");
+    --logo-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23071022' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 14h18M5 14l1.5 4h11L19 14M7 10h3V7H7zM11 10h3V7h-3zM15 10h3V7h-3zM11 7V4h3v3'/%3E%3C/svg%3E");
 }
+
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+
+* { scrollbar-width: thin; scrollbar-color: #2a3b59 transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #2a3b59; border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: #3a5075; background-clip: content-box; border: 2px solid transparent; }
+::selection { background: rgba(56, 189, 248, .35); color: #fff; }
+
 body {
     margin: 0;
-    background: var(--bg);
     color: var(--text);
-    font-family: "Segoe UI", Arial, sans-serif;
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    background:
+        radial-gradient(900px 520px at 6% -8%, rgba(56, 189, 248, .13), transparent 62%),
+        radial-gradient(820px 520px at 100% 0%, rgba(129, 140, 248, .13), transparent 62%),
+        var(--bg);
+    background-attachment: fixed;
 }
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(148, 163, 184, .045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, .045) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 78%);
+    mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 78%);
+}
+
+/* ---------- Header ---------- */
 header {
-    padding: 24px 5%;
-    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    min-height: var(--header-h);
+    padding: 12px 5%;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 16px;
     flex-wrap: wrap;
+    background: rgba(7, 12, 22, .74);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: blur(16px) saturate(150%);
+    border-bottom: 1px solid rgba(56, 189, 248, .14);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
 }
-.brand { font-size: 26px; font-weight: 750; letter-spacing: -.7px; }
-.brand span { color: var(--blue); }
+header::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: -1px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(56, 189, 248, .7), rgba(129, 140, 248, .7), transparent);
+}
+.brand {
+    font-size: 25px;
+    font-weight: 800;
+    letter-spacing: -.035em;
+    line-height: 1;
+    white-space: nowrap;
+}
+.brand::before {
+    content: "";
+    display: inline-block;
+    vertical-align: middle;
+    width: 40px; height: 40px;
+    margin: -4px 12px 0 0;
+    border-radius: 12px;
+    background:
+        var(--logo-glyph) center / 24px 24px no-repeat,
+        linear-gradient(135deg, #38bdf8, #818cf8);
+    box-shadow: 0 6px 20px rgba(56, 189, 248, .4), inset 0 1px 0 rgba(255, 255, 255, .45);
+}
+.brand span {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
 .subtitle { color: var(--muted); margin-top: 5px; font-size: 13px; }
+header .subtitle { margin: 7px 0 0 52px; letter-spacing: .03em; font-size: 12px; }
+
+/* ---------- Layout ---------- */
 main { max-width: 1400px; margin: auto; padding: 28px 5%; }
 .topline {
     display: flex; justify-content: space-between; align-items: center;
     gap: 12px; flex-wrap: wrap; margin-bottom: 22px;
 }
-h1 { font-size: 24px; margin: 0 0 6px; }
+h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: -.02em; }
+.topline h1 { font-size: 20px; font-weight: 700; }
 p { color: var(--muted); }
+
+/* ---------- Buttons ---------- */
 button {
-    border: 1px solid var(--border);
-    background: #1b2a42;
-    color: var(--text);
-    border-radius: 8px;
-    padding: 9px 13px;
-    cursor: pointer;
+    font-family: inherit;
     font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    background: linear-gradient(180deg, #1f2f4c, #172540);
+    border: 1px solid #2c3f60;
+    border-radius: 10px;
+    padding: 9px 15px;
+    cursor: pointer;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 2px 8px rgba(0, 0, 0, .28);
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease, filter .15s ease;
 }
-button:hover { border-color: var(--blue); }
-button:disabled { opacity: .5; cursor: wait; }
-.primary { background: #075985; border-color: #0284c7; }
+button:hover { border-color: rgba(56, 189, 248, .75); transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255, 255, 255, .08) inset, 0 6px 16px rgba(56, 189, 248, .14); }
+button:active { transform: translateY(0); }
+button:disabled { opacity: .5; cursor: wait; transform: none; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid rgba(56, 189, 248, .85); outline-offset: 2px; }
+.primary {
+    color: #fff;
+    background: linear-gradient(135deg, #0ea5e9, #6366f1);
+    border-color: rgba(125, 211, 252, .45);
+    box-shadow: 0 8px 22px rgba(14, 165, 233, .28), inset 0 1px 0 rgba(255, 255, 255, .28);
+}
+.primary:hover { filter: brightness(1.12); border-color: rgba(186, 230, 253, .7); box-shadow: 0 10px 26px rgba(14, 165, 233, .4), inset 0 1px 0 rgba(255, 255, 255, .3); }
 .danger { color: #fecdd3; }
+
+/* ---------- Cards & panels ---------- */
 .cards {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -64,516 +202,1907 @@ button:disabled { opacity: .5; cursor: wait; }
     margin-bottom: 24px;
 }
 .card, .panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--line-soft);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
 }
-.card { padding: 20px; }
-.card-label { color: var(--muted); font-size: 13px; }
-.card-number { font-size: 30px; font-weight: 700; margin-top: 10px; }
+.card {
+    --tone: var(--accent);
+    --ico: var(--i-box);
+    position: relative;
+    padding: 20px 22px;
+    overflow: hidden;
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.card:hover { transform: translateY(-3px); border-color: rgba(56, 189, 248, .5); box-shadow: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 18px 40px rgba(0, 0, 0, .45), 0 0 0 1px rgba(56, 189, 248, .12); }
+.card::before {
+    content: "";
+    position: absolute; inset: 0 0 auto 0; height: 2px;
+    background: linear-gradient(90deg, var(--tone), transparent 85%);
+}
+.card::after {
+    content: "";
+    position: absolute; right: 18px; top: 18px;
+    width: 26px; height: 26px;
+    background: var(--tone);
+    opacity: .85;
+    -webkit-mask: var(--ico) center / contain no-repeat;
+    mask: var(--ico) center / contain no-repeat;
+    filter: drop-shadow(0 0 10px var(--tone));
+}
+.card:has(#totalCount)       { --ico: var(--i-box); }
+.card:has(#runningCount)     { --ico: var(--i-play);   --tone: var(--green); }
+.card:has(#otherCount)       { --ico: var(--i-pause);  --tone: var(--yellow); }
+.card:has(#engineVersion)    { --ico: var(--i-server); --tone: var(--accent-2); }
+.card:has(#imageCount)       { --ico: var(--i-layers); }
+.card:has(#networkCount)     { --ico: var(--i-globe);  --tone: var(--accent-2); }
+.card:has(#volumeCount)      { --ico: var(--i-database); --tone: var(--green); }
+.card:has(#healthCount)      { --ico: var(--i-heart); }
+.card:has(#healthProblems)   { --ico: var(--i-alert);  --tone: var(--red); }
+.card:has(#healthHealthy)    { --ico: var(--i-check);  --tone: var(--green); }
+.card-label { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding-right: 36px; }
+.card-number {
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    margin-top: 10px;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(180deg, #ffffff 20%, #9fb2d1);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
 .panel { overflow: hidden; margin-bottom: 24px; }
 .panel-head {
-    padding: 18px 20px;
-    border-bottom: 1px solid var(--border);
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--line-soft);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .03), transparent);
     display: flex; justify-content: space-between;
     align-items: center; flex-wrap: wrap; gap: 12px;
 }
-.panel-head h2 { margin: 0; font-size: 17px; }
-#search {
-    background: #0b1120; color: var(--text);
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px 12px; min-width: 220px;
+.panel-head h2 {
+    margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.01em;
+    display: flex; align-items: center; gap: 10px;
 }
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; text-align: left; }
-th, td {
-    padding: 15px 18px; border-bottom: 1px solid var(--border);
-    font-size: 13px; white-space: nowrap;
-}
-th { color: var(--muted); font-weight: 600; }
-tr:last-child td { border-bottom: 0; }
-.name { font-weight: 650; }
-.image { color: var(--muted); margin-top: 5px; font-size: 12px; }
-.status {
-    display: inline-block; border-radius: 20px;
-    padding: 5px 9px; font-size: 11px; font-weight: 650;
-    background: #26354c; color: #cbd5e1;
-}
-.status.running { background: #064e3b; color: #a7f3d0; }
-.status.exited { background: #3f2931; color: #fecdd3; }
-.status.paused { background: #513e12; color: #fde68a; }
-.actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.actions button { padding: 7px 9px; }
-.message { padding: 22px; color: var(--muted); text-align: center; }
-.error { color: #fda4af; }
-pre {
-    padding: 16px; overflow: auto; max-height: 400px;
-    white-space: pre-wrap; overflow-wrap: anywhere;
-    color: #cbd5e1; background: #080d18; margin: 0;
-}
-.footer { color: var(--muted); font-size: 12px; text-align: center; padding: 20px; }
-@media(max-width: 700px) {
-    .cards { grid-template-columns: 1fr; }
-    header, main { padding-left: 18px; padding-right: 18px; }
-    #search { min-width: 0; width: 100%; }
-    .panel-head { align-items: stretch; }
+.panel-head h2::before {
+    content: "";
+    width: 4px; height: 18px; border-radius: 3px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    box-shadow: 0 0 12px rgba(56, 189, 248, .6);
 }
 
-/* Phase 9: Compose security results */
+/* ---------- Inputs ---------- */
+input, select, textarea { font-family: inherit; font-size: 13px; }
+input:not([type=checkbox]):not([type=radio]), select, textarea {
+    background-color: rgba(5, 9, 18, .85) !important;
+    color: var(--text) !important;
+    border: 1px solid #2a3b59 !important;
+    border-radius: 10px !important;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, .18);
+}
+::placeholder { color: #62779a; }
+select option { background: #0b1120; color: var(--text); }
+#search {
+    min-width: 260px;
+    padding: 10px 12px 10px 38px;
+    background-image: var(--i-search);
+    background-repeat: no-repeat;
+    background-position: 12px center;
+    background-size: 16px;
+}
+label { letter-spacing: .01em; }
+
+/* ---------- Tables ---------- */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; }
+th, td {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(38, 53, 76, .75);
+    font-size: 13px;
+    white-space: nowrap;
+}
+th {
+    color: #8ea2bf;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    background: rgba(6, 10, 19, .5);
+}
+tbody tr { transition: background .15s ease; }
+tbody tr:hover { background: rgba(56, 189, 248, .06); }
+tr:last-child td { border-bottom: 0; }
+.name { font-weight: 650; color: #f1f5fb; }
+.image { color: var(--muted); margin-top: 4px; font-size: 12px; font-family: "JetBrains Mono", Consolas, monospace; }
+
+/* ---------- Status pills ---------- */
+.status {
+    display: inline-flex; align-items: center; gap: 7px;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: capitalize;
+    background: #1a2740; color: #cbd5e1;
+    border: 1px solid #2f4263;
+}
+.status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.status.running { background: rgba(52, 211, 153, .12); color: #6ee7b7; border-color: rgba(52, 211, 153, .38); }
+.status.running::before { animation: dp-pulse 2s infinite; }
+.status.exited { background: rgba(251, 113, 133, .12); color: #fda4af; border-color: rgba(251, 113, 133, .38); }
+.status.paused { background: rgba(251, 191, 36, .12); color: #fde68a; border-color: rgba(251, 191, 36, .38); }
+@keyframes dp-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, .6); }
+    70%  { box-shadow: 0 0 0 7px rgba(52, 211, 153, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+.actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.actions button { padding: 6px 11px; font-size: 12px; border-radius: 8px; }
+.actions button:nth-child(1) { color: #7dd3fc; }
+.message { padding: 22px; color: var(--muted); text-align: center; }
+.message.success { color: #6ee7b7; }
+.error { color: #fda4af; }
+
+/* ---------- Output / terminal ---------- */
+.output-content {
+    padding: 18px 20px;
+    overflow: auto;
+    max-height: 620px;
+    color: #c8d6ec;
+    background: #050911;
+    margin: 0;
+    font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04), inset 0 12px 24px rgba(0, 0, 0, .35);
+}
+.stats-dashboard { white-space: normal; font-family: "Inter", "Segoe UI", system-ui, sans-serif; background: #070d1a; }
+.stats-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.stat-tile, .chart-card {
+    min-width: 0;
+    background: linear-gradient(180deg, #0f1c33, #0a1425);
+    border: 1px solid var(--line-soft);
+    border-radius: 14px;
+    padding: 16px;
+}
+.stat-tile { position: relative; overflow: hidden; }
+.stat-tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, var(--accent), var(--accent-2)); }
+.stat-label { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.stat-value { font-size: 28px; font-weight: 800; letter-spacing: -.02em; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.stat-unit { color: var(--muted); font-size: 12px; font-weight: 500; }
+.chart-card { margin-top: 14px; }
+.chart-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.chart-subtitle { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+.chart-canvas { display: block; width: 100%; height: 190px; }
+.memory-chart-row { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.memory-canvas { width: 170px; height: 170px; flex: 0 0 170px; }
+.chart-legend { display: grid; gap: 10px; font-size: 12px; }
+.legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; }
+.stats-footer { color: var(--muted); font-size: 11px; margin-top: 12px; }
+
+.footer { color: #6f84a6; font-size: 12px; text-align: center; padding: 26px 20px 8px; }
+
+/* ---------- Compose security results ---------- */
 .security-results {
     margin: 0 20px 18px;
-    padding: 16px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: #0d1728;
+    padding: 18px;
+    border: 1px solid var(--line-soft);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #0e1a30, #0a1425);
 }
-
-.security-results h3 {
-    margin: 0 0 10px;
-    font-size: 15px;
-}
-
+.security-results h3 { margin: 0 0 12px; font-size: 15px; }
 .security-summary {
-    padding: 10px 12px;
-    border-radius: 8px;
-    margin-bottom: 12px;
-    font-size: 13px;
-    overflow-wrap: anywhere;
+    padding: 11px 14px; border-radius: 10px; margin-bottom: 12px;
+    font-size: 13px; font-weight: 600; overflow-wrap: anywhere;
+    border: 1px solid transparent;
 }
-
-.security-summary.safe {
-    background: #064e3b;
-    color: #a7f3d0;
-}
-
-.security-summary.blocked {
-    background: #4c1d2b;
-    color: #fecdd3;
-}
-
-.security-summary.warning {
-    background: #513e12;
-    color: #fde68a;
-}
-
-.security-summary.neutral {
-    background: #1b2a42;
-    color: var(--text);
-}
-
-.security-findings {
-    display: grid;
-    gap: 10px;
-}
-
+.security-summary.safe { background: rgba(52, 211, 153, .12); color: #a7f3d0; border-color: rgba(52, 211, 153, .35); }
+.security-summary.blocked { background: rgba(251, 113, 133, .13); color: #fecdd3; border-color: rgba(251, 113, 133, .38); }
+.security-summary.warning { background: rgba(251, 191, 36, .12); color: #fde68a; border-color: rgba(251, 191, 36, .35); }
+.security-summary.neutral { background: #1b2a42; color: var(--text); border-color: #2c3f60; }
+.security-findings { display: grid; gap: 10px; }
 .security-finding {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px;
-    overflow-wrap: anywhere;
+    border: 1px solid var(--line-soft); border-radius: 10px;
+    padding: 13px 14px; overflow-wrap: anywhere;
+    background: rgba(255, 255, 255, .02);
 }
+.security-finding-title { font-weight: 700; margin-bottom: 6px; }
+.security-meta { color: var(--muted); font-size: 12px; margin-top: 5px; }
+.security-recommendation { margin-top: 8px; font-size: 13px; color: #cbd5e1; overflow-wrap: anywhere; }
+.security-empty { color: var(--muted); font-size: 13px; }
 
-.security-finding-title {
-    font-weight: 650;
-    margin-bottom: 6px;
+/* ---------- Sidebar navigation ---------- */
+.app-shell { display: flex; min-height: calc(100vh - var(--header-h)); align-items: stretch; }
+.sidebar {
+    width: 256px; flex: 0 0 256px;
+    padding: 20px 14px;
+    border-right: 1px solid var(--line-soft);
+    background: linear-gradient(180deg, rgba(11, 18, 33, .94), rgba(7, 12, 22, .97));
+    position: sticky; top: var(--header-h);
+    height: calc(100vh - var(--header-h));
+    overflow: auto;
 }
-
-.security-meta {
-    color: var(--muted);
-    font-size: 12px;
-    margin-top: 5px;
+.sidebar-label { font-size: 10px; letter-spacing: .18em; color: #6f84a6; padding: 6px 14px 12px; font-weight: 800; }
+.nav-btn {
+    position: relative;
+    display: flex; align-items: center; gap: 12px;
+    width: 100%; text-align: left;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #8fa2bf;
+    padding: 11px 14px;
+    border-radius: 12px;
+    margin: 3px 0;
+    font-size: 13.5px; font-weight: 600;
+    box-shadow: none;
+    cursor: pointer;
 }
-
-.security-recommendation {
-    margin-top: 8px;
-    font-size: 13px;
-    color: #cbd5e1;
-    overflow-wrap: anywhere;
+.nav-btn:hover { background: rgba(56, 189, 248, .08); color: var(--text); border-color: transparent; transform: translateX(2px); box-shadow: none; }
+.nav-btn.active {
+    background: linear-gradient(90deg, rgba(56, 189, 248, .2), rgba(129, 140, 248, .07));
+    border-color: rgba(56, 189, 248, .3);
+    color: #7dd3fc;
+    font-weight: 700;
+    box-shadow: inset 3px 0 0 var(--accent), 0 6px 18px rgba(56, 189, 248, .08);
 }
+.nav-icon { width: 20px; height: 20px; font-size: 0; line-height: 0; flex: 0 0 20px; }
+.nav-icon::before {
+    content: "";
+    display: block; width: 20px; height: 20px;
+    background: currentColor;
+    -webkit-mask: var(--i-grid) center / contain no-repeat;
+    mask: var(--i-grid) center / contain no-repeat;
+}
+.nav-btn[data-page="overview"]   .nav-icon::before { -webkit-mask-image: var(--i-grid);     mask-image: var(--i-grid); }
+.nav-btn[data-page="containers"] .nav-icon::before { -webkit-mask-image: var(--i-box);      mask-image: var(--i-box); }
+.nav-btn[data-page="images"]     .nav-icon::before { -webkit-mask-image: var(--i-layers);   mask-image: var(--i-layers); }
+.nav-btn[data-page="compose"]    .nav-icon::before { -webkit-mask-image: var(--i-compose);  mask-image: var(--i-compose); }
+.nav-btn[data-page="storage"]    .nav-icon::before { -webkit-mask-image: var(--i-database); mask-image: var(--i-database); }
+.nav-btn[data-page="security"]   .nav-icon::before { -webkit-mask-image: var(--i-shield);   mask-image: var(--i-shield); }
+.nav-btn[data-page="monitoring"] .nav-icon::before { -webkit-mask-image: var(--i-activity); mask-image: var(--i-activity); }
+.nav-btn[data-page="health"]     .nav-icon::before { -webkit-mask-image: var(--i-heart);    mask-image: var(--i-heart); }
+.nav-btn[data-page="history"]    .nav-icon::before { -webkit-mask-image: var(--i-clock);    mask-image: var(--i-clock); }
 
-.security-empty {
-    color: var(--muted);
-    font-size: 13px;
+.workspace { min-width: 0; flex: 1; padding: 0 28px 32px; }
+.workspace main { max-width: 1400px; margin: 0 auto; }
+.page-heading { padding: 22px 0 4px; }
+.page-heading h1 { margin: 0 0 6px; font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+.nav-page { display: none; }
+.nav-page.active { display: block; animation: dp-in .38s ease both; }
+@keyframes dp-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.nav-page > .panel, .nav-page > section.panel { margin-top: 16px; }
+.nav-page .cards { margin-top: 14px; }
+
+/* Overview hero */
+.nav-page[data-page-content="overview"] > .page-heading {
+    position: relative; overflow: hidden;
+    margin-top: 22px; padding: 32px 34px;
+    border-radius: 22px;
+    border: 1px solid rgba(56, 189, 248, .25);
+    background:
+        radial-gradient(560px 240px at 100% 0%, rgba(129, 140, 248, .28), transparent 70%),
+        radial-gradient(520px 260px at 0% 100%, rgba(56, 189, 248, .22), transparent 70%),
+        linear-gradient(180deg, #0f1c34, #0a1325);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+.nav-page[data-page-content="overview"] > .page-heading::after {
+    content: "";
+    position: absolute; right: 0; top: 0; bottom: 0; width: 46%;
+    background-image: radial-gradient(rgba(125, 211, 252, .35) 1px, transparent 1.4px);
+    background-size: 18px 18px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000);
+    mask-image: linear-gradient(90deg, transparent, #000);
+    pointer-events: none;
+}
+.nav-page[data-page-content="overview"] > .page-heading h1 {
+    position: relative; z-index: 1;
+    font-size: 34px;
+    background: linear-gradient(90deg, #ffffff, #93c5fd 60%, #a5b4fc);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.nav-page[data-page-content="overview"] > .page-heading .subtitle { position: relative; z-index: 1; font-size: 14px; }
+
+/* ---------- Runtime security audit ---------- */
+.runtime-audit-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 14px 0 18px; }
+.runtime-audit-card {
+    --tone: var(--accent);
+    position: relative; overflow: hidden;
+    border: 1px solid var(--line-soft); border-radius: 14px;
+    padding: 16px;
+    background: linear-gradient(180deg, #0f1c33, #0a1425);
+}
+.runtime-audit-card::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 2px; background: linear-gradient(90deg, var(--tone), transparent 85%); }
+.runtime-audit-card:nth-child(3) { --tone: var(--red); }
+.runtime-audit-card:nth-child(4) { --tone: var(--orange); }
+.runtime-audit-card:nth-child(5) { --tone: var(--yellow); }
+.runtime-audit-card:nth-child(6) { --tone: var(--green); }
+.runtime-audit-label { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 8px; }
+.runtime-audit-value { font-size: 28px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--tone); }
+.runtime-audit-card:nth-child(1) .runtime-audit-value, .runtime-audit-card:nth-child(2) .runtime-audit-value { color: var(--text); }
+.runtime-container {
+    border: 1px solid var(--line-soft); border-radius: 14px;
+    padding: 16px; margin: 12px 0;
+    background: linear-gradient(180deg, #0f1c33, #0a1425);
+    transition: border-color .2s ease;
+}
+.runtime-container:hover { border-color: rgba(56, 189, 248, .4); }
+.runtime-container-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.runtime-risk {
+    font-size: 11px; font-weight: 800; letter-spacing: .06em;
+    border-radius: 999px; padding: 5px 11px;
+    background: #243247; color: #e2e8f0; border: 1px solid #34486a;
+}
+.runtime-risk.critical { background: rgba(251, 113, 133, .16); color: #fda4af; border-color: rgba(251, 113, 133, .45); }
+.runtime-risk.high { background: rgba(251, 146, 60, .15); color: #fdba74; border-color: rgba(251, 146, 60, .45); }
+.runtime-risk.medium { background: rgba(251, 191, 36, .14); color: #fde68a; border-color: rgba(251, 191, 36, .42); }
+.runtime-risk.low { background: rgba(52, 211, 153, .13); color: #a7f3d0; border-color: rgba(52, 211, 153, .4); }
+.runtime-finding { border-top: 1px solid var(--line-soft); padding: 10px 0; }
+.runtime-finding-title { font-weight: 700; margin-bottom: 5px; }
+.runtime-finding p { margin: 4px 0; font-size: 13px; overflow-wrap: anywhere; }
+.runtime-audit-muted { color: var(--muted); font-size: 13px; }
+.runtime-audit-tools { display: flex; gap: 10px; flex-wrap: wrap; padding: 0 20px 16px; align-items: center; }
+.runtime-audit-tools input, .runtime-audit-tools select { padding: 10px 12px; min-width: 180px; }
+.runtime-audit-tools input { flex: 1; }
+.runtime-finding-details { border-top: 1px solid var(--line-soft); padding: 11px 0; }
+.runtime-finding-details summary { cursor: pointer; font-weight: 700; overflow-wrap: anywhere; list-style: none; display: flex; gap: 10px; align-items: baseline; }
+.runtime-finding-details summary::-webkit-details-marker { display: none; }
+.runtime-finding-details summary::before { content: "\25B8"; color: var(--accent); transition: transform .15s ease; flex: 0 0 auto; }
+.runtime-finding-details[open] summary::before { transform: rotate(90deg); }
+.runtime-finding-details p { margin: 8px 0 0 22px; font-size: 13px; overflow-wrap: anywhere; }
+.runtime-audit-results-count { padding: 0 20px 12px; color: var(--muted); font-size: 12px; }
+
+
+/* ---------- Responsive ---------- */
+@media (max-width: 800px) {
+    :root { --header-h: 0px; }
+    header { position: relative; }
+    .app-shell { display: block; min-height: 0; }
+    .sidebar {
+        width: 100%; height: auto; position: relative; top: auto;
+        border-right: 0; border-bottom: 1px solid var(--line-soft);
+        display: flex; gap: 5px; overflow-x: auto; padding: 10px;
+    }
+    .sidebar-label { display: none; }
+    .nav-btn { width: auto; min-width: max-content; margin: 0; padding: 10px 12px; }
+    .nav-btn:hover { transform: none; }
+    .nav-icon { display: none; }
+    .workspace { padding: 0 12px 20px; }
+    .workspace main { padding: 0; }
+    .nav-page[data-page-content="overview"] > .page-heading { padding: 24px 20px; }
+    .nav-page[data-page-content="overview"] > .page-heading h1 { font-size: 26px; }
+}
+@media (max-width: 700px) {
+    .cards { grid-template-columns: 1fr; }
+    header, main { padding-left: 18px; padding-right: 18px; }
+    header .subtitle { margin-left: 0; }
+    #search { min-width: 0; width: 100%; }
+    .panel-head { align-items: stretch; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .memory-canvas { width: 145px; height: 145px; flex-basis: 145px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 
 </style>
+
 </head>
+
 <body>
+
 <header>
+
     <div>
+
         <div class="brand">Dock<span>Pilot</span></div>
+
         <div class="subtitle">Intelligent Docker Container Management</div>
+
     </div>
+
     <button class="primary" id="refreshBtn" onclick="loadContainers()">
+
         ↻ Refresh containers
+
     </button>
+
 </header>
 
+
+
+<div class="app-shell">
+<nav class="sidebar" aria-label="DockPilot navigation">
+<div class="sidebar-label">WORKSPACE</div>
+<button class="nav-btn active" data-page="overview"><span class="nav-icon">▦</span>Overview</button>
+<button class="nav-btn" data-page="containers"><span class="nav-icon">▣</span>Containers</button>
+<button class="nav-btn" data-page="images"><span class="nav-icon">▤</span>Images</button>
+<button class="nav-btn" data-page="compose"><span class="nav-icon">▧</span>Compose Projects</button>
+<button class="nav-btn" data-page="storage"><span class="nav-icon">⌘</span>Networks &amp; Volumes</button>
+<button class="nav-btn" data-page="security"><span class="nav-icon">◇</span>Security</button>
+<button class="nav-btn" data-page="monitoring"><span class="nav-icon">⌁</span>Monitoring</button>
+<button class="nav-btn" data-page="health"><span class="nav-icon">♥</span>Health Monitor</button>
+<button class="nav-btn" data-page="history"><span class="nav-icon">◷</span>Event History</button>
+</nav>
+<div class="workspace">
 <main>
+
     <div class="topline">
+
         <div>
+
             <h1>Container Overview</h1>
+
             <div class="subtitle" id="lastUpdated">Connecting to Docker Engine...</div>
+
         </div>
+
         <span class="status" id="connectionStatus">Checking connection</span>
+
     </div>
+
+
 
     <section class="cards">
+
         <div class="card">
+
             <div class="card-label">Total containers</div>
+
             <div class="card-number" id="totalCount">—</div>
+
         </div>
+
         <div class="card">
+
             <div class="card-label">Running</div>
+
             <div class="card-number" id="runningCount">—</div>
+
         </div>
+
         <div class="card">
+
             <div class="card-label">Stopped / Other</div>
+
             <div class="card-number" id="otherCount">—</div>
+
+        </div>
+
+    </section>
+
+    <section class="panel" id="systemOverviewPanel">
+        <div class="panel-head">
+            <div>
+                <h2>Docker System Overview</h2>
+                <div class="subtitle">Live inventory reported by your connected Docker Engine</div>
+            </div>
+            <button onclick="loadSystemOverview()">Refresh overview</button>
+        </div>
+        <div class="cards system-cards" style="padding: 16px; margin-bottom: 0;">
+            <div class="card"><div class="card-label">Docker Engine</div><div class="card-number" id="engineVersion" style="font-size: 22px;">—</div><div class="subtitle" id="enginePlatform">Checking engine...</div></div>
+            <div class="card"><div class="card-label">Local images</div><div class="card-number" id="imageCount">—</div></div>
+            <div class="card"><div class="card-label">Networks</div><div class="card-number" id="networkCount">—</div></div>
+            <div class="card"><div class="card-label">Volumes</div><div class="card-number" id="volumeCount">—</div></div>
         </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="imagesPanel">
         <div class="panel-head">
-            <h2>Your Docker containers</h2>
-            <input id="search" type="search"
-                placeholder="Search name, ID or image..."
-                oninput="renderContainers()">
+            <div>
+                <h2>Docker Images</h2>
+                <div class="subtitle">Real images stored in your connected Docker Engine</div>
+            </div>
+            <button onclick="loadImages()">↻ Refresh images</button>
         </div>
+        <div style="padding:18px 20px; border-bottom:1px solid var(--border); display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <label for="pullImageName" style="color:var(--muted);font-size:13px;">Pull an image</label>
+            <input id="pullImageName" type="text" placeholder="e.g. nginx:alpine" style="background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 12px;min-width:220px;flex:1;" maxlength="255">
+            <button class="primary" id="pullImageBtn" onclick="pullImageFromRegistry()">Pull image</button>
+        </div>
+        <div id="imageMessage" class="message" style="padding:10px 20px;" aria-live="polite">Loading images...</div>
         <div class="table-wrap">
             <table>
-                <thead>
-                    <tr>
-                        <th>Container</th>
-                        <th>Status</th>
-                        <th>Container ID</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="containerRows">
-                    <tr><td colspan="4" class="message">Loading real Docker data...</td></tr>
-                </tbody>
+                <thead><tr><th>Image / Tag</th><th>Image ID</th><th>Size</th><th>Created</th></tr></thead>
+                <tbody id="imageRows"><tr><td colspan="4" class="message">Loading real Docker images...</td></tr></tbody>
             </table>
         </div>
-        <div id="listMessage" class="message" hidden></div>
     </section>
+
+    
+    <section class="panel" id="createContainerPanel">
+        <div class="panel-head">
+            <div>
+                <h2>Create a Container</h2>
+                <div class="subtitle">Creates and starts a real container from an image already on this Docker Engine</div>
+            </div>
+        </div>
+        <form id="createContainerForm" style="padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;" onsubmit="createContainerFromDashboard(event)">
+            <div>
+                <label for="createImage" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Docker image *</label>
+                <select id="createImage" required style="width:100%;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;">
+                    <option value="">Loading local images...</option>
+                </select>
+            </div>
+            <div>
+                <label for="createName" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Container name (optional)</label>
+                <input id="createName" maxlength="128" placeholder="e.g. dockpilot-nginx" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;">
+            </div>
+            <div>
+                <label for="containerPort" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Container port</label>
+                <input id="containerPort" type="number" min="1" max="65535" value="80" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;">
+            </div>
+            <div>
+                <label for="hostPort" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Host port (optional)</label>
+                <input id="hostPort" type="number" min="1" max="65535" placeholder="e.g. 8088" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;">
+            </div>
+            <div>
+                <label for="restartPolicy" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Restart policy</label>
+                <select id="restartPolicy" style="width:100%;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;">
+                    <option value="no">No automatic restart</option>
+                    <option value="on-failure">On failure</option>
+                    <option value="always">Always</option>
+                    <option value="unless-stopped">Unless stopped</option>
+                </select>
+            </div>
+            <div style="grid-column:1/-1;">
+                <label for="containerEnv" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Environment variables (optional; one KEY=VALUE per line)</label>
+                <textarea id="containerEnv" rows="3" placeholder="NODE_ENV=production" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;resize:vertical;"></textarea>
+            </div>
+            <div style="grid-column:1/-1;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                <button class="primary" type="submit" id="createContainerBtn">Create and start container</button>
+                <span id="createContainerMessage" class="message" aria-live="polite">Select a local image to begin.</span>
+            </div>
+        </form>
+    </section>
+
+
+<section class="panel" id="composePanel">
+  <div class="panel-head"><div><h2>Docker Compose Projects</h2><div class="subtitle">Save Compose YAML persistently, validate it, and start/stop saved projects. Stop preserves containers, networks, and volumes.</div></div><button onclick="loadComposeProjects()">↻ Refresh projects</button></div>
+  <div style="padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+    <div><label for="composeProjectName" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Project name *</label><input id="composeProjectName" value="dockpilot-demo" maxlength="63" pattern="[a-z0-9][a-z0-9_-]*" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;"></div>
+    <div style="grid-column:1/-1;"><label for="composeYaml" style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px;">Compose YAML *</label><textarea id="composeYaml" rows="10" spellcheck="false" style="width:100%;box-sizing:border-box;background:#0b1120;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:11px;font-family:Consolas,monospace;resize:vertical;">services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "8090:80"
+</textarea><div class="subtitle">Example uses host port 8090. Ensure the port is free before deploying.</div></div>
+    <div style="grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button type="button" onclick="validateCompose()">Validate YAML</button><button type="button" onclick="saveCompose()">Save YAML</button><button type="button" class="primary" onclick="deployCompose()">Save and deploy</button><span id="composeMessage" class="message" aria-live="polite">Validation does not change Docker resources.</span></div>
+  </div>
+  <div id="composeSecurityResults" class="security-results" hidden aria-live="polite">
+    <h3>Compose Security Analysis</h3>
+    <div id="composeSecuritySummary" class="security-summary neutral">No security analysis has been run yet.</div>
+    <div id="composeSecurityFindings" class="security-findings"></div>
+  </div>
+  <div class="panel-head"><div><h2 style="font-size:15px;">Detected Compose Projects</h2><div class="subtitle">Based on labels on real containers. Saved configurations remain available even when stopped.</div></div><button onclick="loadSavedComposeProjects()">↻ Refresh saved projects</button></div>
+  <div id="composeProjectsMessage" class="message" style="padding:10px 20px;">Loading Compose projects...</div>
+  <div id="composeProjectsList" style="padding:0 20px 18px;"></div><div class="panel-head"><div><h2 style="font-size:15px;">Saved Compose Configurations</h2><div class="subtitle">Stored under the DockPilot project directory</div></div></div><div id="savedComposeMessage" class="message" style="padding:10px 20px;">Loading saved configurations...</div><div id="savedComposeList" style="padding:0 20px 18px;"></div>
+</section>
+
+<section class="panel" id="networksPanel">
+        <div class="panel-head">
+            <div><h2>Docker Networks</h2><div class="subtitle">Read-only inventory of networks and connected containers</div></div>
+            <button onclick="loadNetworks()">↻ Refresh networks</button>
+        </div>
+        <div id="networkMessage" class="message" style="padding:10px 20px;" aria-live="polite">Loading networks...</div>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Driver</th><th>Scope</th><th>Connected containers</th><th>Internal</th></tr></thead><tbody id="networkRows"><tr><td colspan="5" class="message">Loading real Docker networks...</td></tr></tbody></table></div>
+    </section>
+
+    <section class="panel" id="volumesPanel">
+        <div class="panel-head">
+            <div><h2>Docker Volumes</h2><div class="subtitle">Read-only inventory of persistent Docker storage; no volumes are changed or deleted</div></div>
+            <button onclick="loadVolumes()">↻ Refresh volumes</button>
+        </div>
+        <div id="volumeMessage" class="message" style="padding:10px 20px;" aria-live="polite">Loading volumes...</div>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Driver</th><th>Scope</th><th>Created</th><th>Mountpoint</th></tr></thead><tbody id="volumeRows"><tr><td colspan="5" class="message">Loading real Docker volumes...</td></tr></tbody></table></div>
+    </section>
+
+<section class="panel">
+
+        <div class="panel-head">
+
+            <h2>Your Docker containers</h2>
+
+            <input id="search" type="search"
+
+                placeholder="Search name, ID or image..."
+
+                oninput="renderContainers()">
+
+        </div>
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Container</th>
+
+                        <th>Status</th>
+
+                        <th>Container ID</th>
+
+                        <th>Actions</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="containerRows">
+
+                    <tr><td colspan="4" class="message">Loading real Docker data...</td></tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div id="listMessage" class="message" hidden></div>
+
+    </section>
+
+
 
     <section class="panel" id="outputPanel" hidden>
+
         <div class="panel-head">
+
             <h2 id="outputTitle">Container output</h2>
-            <button onclick="document.getElementById('outputPanel').hidden=true">
+
+            <button onclick="closeOutputPanel()">
+
                 Close
+
             </button>
+
         </div>
-        <pre id="outputContent"></pre>
+
+        <div id="outputContent" class="output-content"></div>
+
     </section>
 
+
+
     <div class="footer">
+
         Data is fetched from your configured Docker Engine through the DockPilot API.
+
         This dashboard does not use sample container records.
+
     </div>
+
 </main>
+</div></div>
 
 <script>
+
 let containers = [];
 let busy = false;
+let statsInterval = null;
+let statsContainerId = null;
+let statsHistory = [];
+let previousNetworkSample = null;
+const MAX_STATS_SAMPLES = 20;
+const STATS_REFRESH_MS = 5000;
+
+
 
 function escapeHtml(value) {
+
     return String(value ?? "").replace(/[&<>"']/g, char => ({
+
         "&": "&amp;",
+
         "<": "&lt;",
+
         ">": "&gt;",
+
         '"': "&quot;",
+
         "'": "&#39;"
+
     })[char]);
+
 }
+
+
 
 function statusClass(status) {
+
     const value = String(status || "").toLowerCase();
+
     if (value === "running") return "running";
+
     if (value === "exited" || value === "dead") return "exited";
+
     if (value === "paused") return "paused";
+
     return "";
+
 }
 
+
+
 async function api(url, options = {}) {
+
     const response = await fetch(url, options);
+
     const text = await response.text();
+
     let data;
 
+
+
     try { data = JSON.parse(text); }
+
     catch { data = text; }
+
+
 
     if (!response.ok) {
         const detail = data && data.detail
             ? data.detail
             : (typeof data === "string" ? data : response.statusText);
-        throw new Error(detail || `HTTP ${response.status}`);
+        const error = new Error(
+            typeof detail === "string"
+                ? detail
+                : (detail?.message || `HTTP ${response.status}`)
+        );
+        if (detail && typeof detail === "object") {
+            error.security = detail.security || null;
+            error.detail = detail;
+        }
+        throw error;
     }
+
     return data;
+
+}
+
+
+
+function formatBytes(bytes) {
+    const value = Number(bytes || 0);
+    if (!value) return "0 B";
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+    return `${(value / Math.pow(1024, index)).toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
+}
+
+function formatDate(value) {
+    if (!value) return "—";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? escapeHtml(value) : escapeHtml(date.toLocaleString());
+}
+
+async function loadImages() {
+    const rows = document.getElementById("imageRows");
+    const message = document.getElementById("imageMessage");
+    rows.innerHTML = '<tr><td colspan="4" class="message">Loading real Docker images...</td></tr>';
+    try {
+        const images = await api("/api/images");
+        if (!Array.isArray(images)) throw new Error("The API returned an unexpected image list.");
+        if (!images.length) {
+            rows.innerHTML = '<tr><td colspan="4" class="message">No local images found. Pull an image above to get started.</td></tr>';
+        } else {
+            rows.innerHTML = images.map(image => {
+                const tags = Array.isArray(image.tags) ? image.tags : ["<none>:<none>"];
+                return `<tr><td><div class="name">${escapeHtml(tags.join(", "))}</div></td><td>${escapeHtml(image.id || "—")}</td><td>${formatBytes(image.size_bytes)}</td><td>${formatDate(image.created)}</td></tr>`;
+            }).join("");
+        }
+        message.textContent = `${images.length} local image${images.length === 1 ? "" : "s"} loaded from Docker.`;
+        message.className = "message";
+        refreshCreateImageOptions(images);
+    } catch (error) {
+        rows.innerHTML = `<tr><td colspan="4" class="message error">${escapeHtml(error.message)}</td></tr>`;
+        message.textContent = "Could not load images. Check that Docker Desktop is running.";
+        message.className = "message error";
+    }
+}
+
+async function pullImageFromRegistry() {
+    const input = document.getElementById("pullImageName");
+    const button = document.getElementById("pullImageBtn");
+    const message = document.getElementById("imageMessage");
+    const image = input.value.trim();
+    if (!image) { message.textContent = "Enter an image name, such as nginx:alpine."; message.className = "message error"; input.focus(); return; }
+    if (!confirm(`Download Docker image "${image}"? This may use network data and disk space.`)) return;
+    button.disabled = true;
+    button.textContent = "Pulling...";
+    message.textContent = `Downloading ${image}. This may take a while...`;
+    message.className = "message";
+    try {
+        const result = await api("/api/images/pull", {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({image})
+        });
+        message.textContent = result.message || `Image ${image} downloaded successfully.`;
+        message.className = "message success";
+        input.value = "";
+        await loadImages();
+        await loadSystemOverview();
+        message.textContent = result.message || `Image ${image} downloaded successfully.`;
+        message.className = "message success";
+    } catch (error) {
+        message.textContent = `Image pull failed: ${error.message}`;
+        message.className = "message error";
+    } finally {
+        button.disabled = false;
+        button.textContent = "Pull image";
+    }
 }
 
 async function loadContainers() {
+
     if (busy) return;
+
     const refreshBtn = document.getElementById("refreshBtn");
+
     refreshBtn.disabled = true;
 
+
+
     try {
+
         const data = await api("/api/containers");
+
         containers = Array.isArray(data) ? data : data.containers;
 
+
+
         if (!Array.isArray(containers)) {
+
             throw new Error("The API returned an unexpected container list.");
+
         }
 
+
+
         document.getElementById("connectionStatus").textContent = "Docker connected";
+
         document.getElementById("connectionStatus").className = "status running";
+
         document.getElementById("lastUpdated").textContent =
+
             "Last updated: " + new Date().toLocaleTimeString();
 
+
+
         document.getElementById("totalCount").textContent = containers.length;
+
         document.getElementById("runningCount").textContent =
+
             containers.filter(c => c.status === "running").length;
+
         document.getElementById("otherCount").textContent =
+
             containers.filter(c => c.status !== "running").length;
 
+
+
         renderContainers();
+
     } catch (error) {
+
         document.getElementById("connectionStatus").textContent = "Connection error";
+
         document.getElementById("connectionStatus").className = "status exited";
+
         document.getElementById("lastUpdated").textContent = error.message;
+
         document.getElementById("containerRows").innerHTML =
+
             '<tr><td colspan="4" class="message error">' +
+
             escapeHtml(error.message) + '</td></tr>';
+
         document.getElementById("totalCount").textContent = "—";
+
         document.getElementById("runningCount").textContent = "—";
+
         document.getElementById("otherCount").textContent = "—";
+
     } finally {
+
         refreshBtn.disabled = false;
+
+    }
+
+}
+
+
+
+async function loadSystemOverview() {
+    try {
+        const data = await api("/api/system/overview");
+        document.getElementById("engineVersion").textContent = "v" + data.engine_version;
+        document.getElementById("enginePlatform").textContent =
+            `${data.operating_system} · ${data.architecture} · API ${data.api_version}`;
+        document.getElementById("imageCount").textContent = data.images;
+        document.getElementById("networkCount").textContent = data.networks;
+        document.getElementById("volumeCount").textContent = data.volumes;
+    } catch (error) {
+        document.getElementById("engineVersion").textContent = "Unavailable";
+        document.getElementById("enginePlatform").textContent = error.message;
+        document.getElementById("imageCount").textContent = "—";
+        document.getElementById("networkCount").textContent = "—";
+        document.getElementById("volumeCount").textContent = "—";
     }
 }
 
+
 function renderContainers() {
+
     const query = document.getElementById("search").value.trim().toLowerCase();
+
     const filtered = containers.filter(c =>
+
         [c.name, c.id, c.image, c.status].some(value =>
+
             String(value ?? "").toLowerCase().includes(query)
+
         )
+
     );
 
+
+
     const rows = document.getElementById("containerRows");
+
     document.getElementById("listMessage").hidden = true;
 
+
+
     if (filtered.length === 0) {
+
         rows.innerHTML = "";
+
         const message = document.getElementById("listMessage");
+
         message.textContent = containers.length === 0
+
             ? "No containers were found in this Docker Engine."
+
             : "No containers match your search.";
+
         message.hidden = false;
+
+        return;
+
+    }
+
+
+
+    rows.innerHTML = filtered.map(c => {
+
+        const id = escapeHtml(c.id);
+
+        const name = escapeHtml(c.name);
+
+        const image = escapeHtml(c.image);
+
+        const status = escapeHtml(c.status);
+
+        const running = c.status === "running";
+
+
+
+        return `<tr>
+
+            <td>
+
+                <div class="name">${name}</div>
+
+                <div class="image">${image}</div>
+
+            </td>
+
+            <td><span class="status ${statusClass(c.status)}">${status}</span></td>
+
+            <td>${id}</td>
+
+            <td><div class="actions">
+
+                ${!running
+
+                    ? `<button onclick="containerAction('${id}','start')">Start</button>`
+
+                    : `<button onclick="containerAction('${id}','stop')">Stop</button>`}
+
+                <button onclick="containerAction('${id}','restart')">Restart</button>
+
+                <button onclick="showDetails('${id}')">Details</button>
+
+                <button onclick="showLogs('${id}')">Logs</button>
+                <button onclick="showStats('${id}')">Stats</button>
+
+            </div></td>
+
+        </tr>`;
+
+    }).join("");
+
+}
+
+
+
+async function containerAction(id, action) {
+
+    const container = containers.find(c => c.id === id);
+
+    if (!container) return;
+
+
+
+    if (action === "stop" || action === "restart") {
+
+        if (!confirm(`${action.toUpperCase()} container "${container.name}"?`)) {
+
+            return;
+
+        }
+
+    }
+
+
+
+    busy = true;
+
+    try {
+
+        await api(`/api/containers/${encodeURIComponent(id)}/${action}`, {
+
+            method: "POST"
+
+        });
+
+        await loadContainers();
+
+        alert(`Docker accepted the ${action} request for ${container.name}.`);
+
+    } catch (error) {
+
+        alert(`Could not ${action} container: ${error.message}`);
+
+    } finally {
+
+        busy = false;
+
+    }
+
+}
+
+
+
+async function showDetails(id) {
+
+    showOutput("Container details", "Loading details...");
+
+    try {
+
+        const data = await api(`/api/containers/${encodeURIComponent(id)}`);
+
+        document.getElementById("outputContent").textContent =
+
+            JSON.stringify(data, null, 2);
+
+    } catch (error) {
+
+        document.getElementById("outputContent").textContent = error.message;
+
+    }
+
+}
+
+
+
+async function showLogs(id) {
+
+    showOutput("Container logs", "Loading logs...");
+
+    try {
+
+        const data = await api(
+
+            `/api/containers/${encodeURIComponent(id)}/logs?tail=100`
+
+        );
+
+        document.getElementById("outputContent").textContent = data.logs || "(No logs returned.)";
+
+    } catch (error) {
+
+        document.getElementById("outputContent").textContent = error.message;
+
+    }
+
+}
+
+
+
+
+async function showStats(id) {
+    stopStatsPolling();
+    showOutput("Live container statistics", "Fetching Docker statistics...");
+    statsContainerId = id;
+    statsHistory = [];
+    previousNetworkSample = null;
+    document.getElementById("outputContent").classList.add("stats-dashboard");
+    document.getElementById("outputContent").innerHTML = `
+        <div class="stats-grid">
+            <div class="stat-tile"><div class="stat-label">CPU usage</div><div class="stat-value" id="cpuCurrent">— <span class="stat-unit">%</span></div></div>
+            <div class="stat-tile"><div class="stat-label">Memory usage</div><div class="stat-value" id="memoryCurrent">—</div><div class="stat-label" id="memoryPercent">Waiting for sample...</div></div>
+        </div>
+        <div class="chart-card"><div class="chart-title">CPU usage over time</div><div class="chart-subtitle">One sample every 5 seconds · latest 20 samples</div><canvas id="cpuChart" class="chart-canvas" aria-label="CPU usage line graph"></canvas></div>
+        <div class="chart-card"><div class="chart-title">Memory utilization</div><div class="chart-subtitle">Used memory compared with the Docker-reported memory limit</div>
+            <div class="memory-chart-row"><canvas id="memoryChart" class="memory-canvas" aria-label="Memory usage doughnut chart"></canvas>
+                <div class="chart-legend"><div><span class="legend-dot" style="background:#38bdf8"></span><span id="memoryUsedLegend">Used: —</span></div>
+                <div><span class="legend-dot" style="background:#26354c"></span><span id="memoryFreeLegend">Remaining: —</span></div></div>
+            </div>
+        </div>
+        <div class="chart-card"><div class="chart-title">Network throughput</div><div class="chart-subtitle">Receive and transmit rates from successive Docker samples (KiB/s)</div><canvas id="networkChart" class="chart-canvas" aria-label="Network receive and transmit line graph"></canvas></div>
+        <div class="stats-footer" id="statsUpdated">Waiting for first sample...</div>`;
+    await refreshContainerStats(id);
+    if (statsContainerId === id) statsInterval = setInterval(() => refreshContainerStats(id), STATS_REFRESH_MS);
+}
+
+async function refreshContainerStats(id) {
+    if (statsContainerId !== id) return;
+    try {
+        const data = await api(`/api/containers/${encodeURIComponent(id)}/stats`);
+        const now = Date.now();
+        let rxRate = 0, txRate = 0;
+        if (previousNetworkSample) {
+            const elapsed = Math.max((now - previousNetworkSample.time) / 1000, 0.001);
+            rxRate = Math.max(0, data.network_rx_bytes - previousNetworkSample.rx) / elapsed / 1024;
+            txRate = Math.max(0, data.network_tx_bytes - previousNetworkSample.tx) / elapsed / 1024;
+        }
+        previousNetworkSample = { time: now, rx: data.network_rx_bytes || 0, tx: data.network_tx_bytes || 0 };
+        statsHistory.push({
+            time: new Date(now).toLocaleTimeString(),
+            cpu: Number(data.cpu_percent) || 0,
+            memoryUsage: Number(data.memory_usage_bytes) || 0,
+            memoryLimit: Number(data.memory_limit_bytes) || 0,
+            rxRate, txRate
+        });
+        if (statsHistory.length > MAX_STATS_SAMPLES) statsHistory.shift();
+
+        const mib = bytes => (bytes / (1024 * 1024)).toFixed(2) + " MiB";
+        const cpu = document.getElementById("cpuCurrent");
+        const memory = document.getElementById("memoryCurrent");
+        if (!cpu || !memory || statsContainerId !== id) return;
+        cpu.innerHTML = `${(Number(data.cpu_percent) || 0).toFixed(2)} <span class="stat-unit">%</span>`;
+        memory.textContent = mib(data.memory_usage_bytes || 0);
+        document.getElementById("memoryPercent").textContent =
+            data.memory_percent == null ? "Memory limit unavailable" : `${Number(data.memory_percent).toFixed(2)}% of limit`;
+        document.getElementById("memoryUsedLegend").textContent = `Used: ${mib(data.memory_usage_bytes || 0)}`;
+        const remaining = Math.max((data.memory_limit_bytes || 0) - (data.memory_usage_bytes || 0), 0);
+        document.getElementById("memoryFreeLegend").textContent =
+            data.memory_limit_bytes ? `Remaining: ${mib(remaining)}` : "Remaining: limit unavailable";
+        document.getElementById("statsUpdated").textContent =
+            `Container: ${data.name} · Updated ${new Date(now).toLocaleTimeString()} · Refreshing every 5 seconds`;
+        drawLineChart("cpuChart", statsHistory.map(s => s.cpu), "#38bdf8", "%");
+        drawDoughnutChart("memoryChart", Number(data.memory_usage_bytes) || 0, Number(data.memory_limit_bytes) || 0);
+        drawNetworkChart("networkChart", statsHistory);
+        const error = document.getElementById("statsError");
+        if (error) error.remove();
+    } catch (error) {
+        const output = document.getElementById("outputContent");
+        if (output && statsContainerId === id) {
+            let errorLine = document.getElementById("statsError");
+            if (!errorLine) {
+                errorLine = document.createElement("div");
+                errorLine.id = "statsError";
+                errorLine.className = "error";
+                errorLine.style.marginTop = "12px";
+                output.appendChild(errorLine);
+            }
+            errorLine.textContent = `Statistics unavailable: ${error.message}`;
+        }
+        if (/not running/i.test(error.message)) stopStatsPolling();
+    }
+}
+
+function stopStatsPolling() {
+    if (statsInterval !== null) { clearInterval(statsInterval); statsInterval = null; }
+    statsContainerId = null;
+}
+
+function closeOutputPanel() {
+    stopStatsPolling();
+    document.getElementById("outputPanel").hidden = true;
+    document.getElementById("outputContent").classList.remove("stats-dashboard");
+}
+
+function prepareCanvas(canvas) {
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, width: rect.width, height: rect.height };
+}
+
+function drawLineChart(canvasId, values, color, unit) {
+    const prepared = prepareCanvas(document.getElementById(canvasId));
+    if (!prepared) return;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    const left = 42, right = 12, top = 12, bottom = 28;
+    const plotW = width - left - right, plotH = height - top - bottom;
+    const maxValue = Math.max(10, Math.ceil(Math.max(...values, 0) / 10) * 10);
+    ctx.font = "11px Segoe UI, Arial"; ctx.lineWidth = 1; ctx.strokeStyle = "#26354c"; ctx.fillStyle = "#9aabc2";
+    for (let i = 0; i <= 4; i++) {
+        const y = top + plotH * i / 4;
+        ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(width - right, y); ctx.stroke();
+        ctx.fillText(`${Math.round(maxValue * (4 - i) / 4)}${unit}`, 2, y + 4);
+    }
+    if (!values.length) return;
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    values.forEach((value, i) => {
+        const x = values.length === 1 ? left + plotW : left + plotW * i / (MAX_STATS_SAMPLES - 1);
+        const y = top + plotH - (Math.max(0, value) / maxValue) * plotH;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.fillStyle = "#9aabc2";
+    const first = statsHistory[0]?.time || "", last = statsHistory[statsHistory.length - 1]?.time || "";
+    ctx.fillText(first, left, height - 7);
+    ctx.fillText(last, Math.max(left, width - right - ctx.measureText(last).width), height - 7);
+}
+
+function drawDoughnutChart(canvasId, used, limit) {
+    const prepared = prepareCanvas(document.getElementById(canvasId));
+    if (!prepared) return;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    const x = width / 2, y = height / 2, radius = Math.min(width, height) * 0.36;
+    ctx.lineWidth = Math.max(13, radius * 0.32); ctx.strokeStyle = "#26354c";
+    ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
+    ctx.textAlign = "center";
+    if (limit > 0) {
+        ctx.strokeStyle = "#38bdf8"; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.arc(x, y, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(used / limit, 1)); ctx.stroke();
+        ctx.lineCap = "butt"; ctx.fillStyle = "#e8eef8"; ctx.font = "bold 18px Segoe UI, Arial";
+        ctx.fillText(`${(used / limit * 100).toFixed(1)}%`, x, y + 5);
+    } else {
+        ctx.fillStyle = "#9aabc2"; ctx.font = "12px Segoe UI, Arial"; ctx.fillText("No limit", x, y + 4);
+    }
+    ctx.textAlign = "start";
+}
+
+function drawNetworkChart(canvasId, history) {
+    const prepared = prepareCanvas(document.getElementById(canvasId));
+    if (!prepared) return;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    const left = 52, right = 12, top = 12, bottom = 28;
+    const plotW = width - left - right, plotH = height - top - bottom;
+    const maxValue = Math.max(1, Math.ceil(Math.max(...history.map(s => Math.max(s.rxRate, s.txRate)), 0)));
+    ctx.font = "11px Segoe UI, Arial"; ctx.lineWidth = 1; ctx.strokeStyle = "#26354c"; ctx.fillStyle = "#9aabc2";
+    for (let i = 0; i <= 4; i++) {
+        const y = top + plotH * i / 4;
+        ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(width - right, y); ctx.stroke();
+        ctx.fillText((maxValue * (4 - i) / 4).toFixed(1), 2, y + 4);
+    }
+    for (const [key, color] of [["rxRate", "#38bdf8"], ["txRate", "#34d399"]]) {
+        if (!history.length) continue;
+        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+        history.forEach((sample, i) => {
+            const x = history.length === 1 ? left + plotW : left + plotW * i / (MAX_STATS_SAMPLES - 1);
+            const y = top + plotH - (sample[key] / maxValue) * plotH;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+    }
+    ctx.fillStyle = "#38bdf8"; ctx.fillRect(left, height - 12, 8, 8);
+    ctx.fillStyle = "#9aabc2"; ctx.fillText("Receive", left + 13, height - 5);
+    ctx.fillStyle = "#34d399"; ctx.fillRect(left + 78, height - 12, 8, 8);
+    ctx.fillStyle = "#9aabc2"; ctx.fillText("Transmit", left + 91, height - 5);
+}
+
+window.addEventListener("resize", () => {
+    if (!statsContainerId || !statsHistory.length) return;
+    const latest = statsHistory[statsHistory.length - 1];
+    drawLineChart("cpuChart", statsHistory.map(s => s.cpu), "#38bdf8", "%");
+    drawDoughnutChart("memoryChart", latest.memoryUsage, latest.memoryLimit);
+    drawNetworkChart("networkChart", statsHistory);
+});
+
+function showOutput(title, content) {
+
+    stopStatsPolling();
+    document.getElementById("outputContent").classList.remove("stats-dashboard");
+    document.getElementById("outputTitle").textContent = title;
+
+    document.getElementById("outputContent").textContent = content;
+
+    document.getElementById("outputPanel").hidden = false;
+
+    document.getElementById("outputPanel").scrollIntoView({ behavior: "smooth" });
+
+}
+
+
+
+function refreshCreateImageOptions(images) {
+    const select = document.getElementById("createImage");
+    const previous = select.value;
+    const usable = [];
+    images.forEach(image => {
+        (image.tags || []).forEach(tag => {
+            if (tag && tag !== "<none>:<none>" && !usable.includes(tag)) usable.push(tag);
+        });
+    });
+    select.innerHTML = '<option value="">Choose a local image...</option>' +
+        usable.map(tag => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`).join("");
+    if (previous && usable.includes(previous)) select.value = previous;
+    if (!usable.length) select.innerHTML = '<option value="">No tagged images found — pull one above</option>';
+}
+
+async function createContainerFromDashboard(event) {
+    event.preventDefault();
+    const image = document.getElementById("createImage").value;
+    const name = document.getElementById("createName").value.trim();
+    const hostPortText = document.getElementById("hostPort").value.trim();
+    const containerPortText = document.getElementById("containerPort").value.trim();
+    const restartPolicy = document.getElementById("restartPolicy").value;
+    const envText = document.getElementById("containerEnv").value;
+    const message = document.getElementById("createContainerMessage");
+    const button = document.getElementById("createContainerBtn");
+
+    if (!image) {
+        message.textContent = "Choose a local Docker image first.";
+        message.className = "message error";
+        return;
+    }
+    if (hostPortText && !containerPortText) {
+        message.textContent = "Enter a container port when using a host port.";
+        message.className = "message error";
+        return;
+    }
+    const payload = {
+        image,
+        name: name || null,
+        host_port: hostPortText ? Number(hostPortText) : null,
+        container_port: containerPortText ? Number(containerPortText) : null,
+        environment: envText.split(/\r?\n/).map(line => line.trim()).filter(Boolean),
+        restart_policy: restartPolicy
+    };
+    if (!confirm(`Create and start a new container from "${image}"${name ? ` named "${name}"` : ""}?`)) return;
+
+    button.disabled = true;
+    button.textContent = "Creating...";
+    message.textContent = "Creating and starting a real Docker container...";
+    message.className = "message";
+    try {
+        const result = await api("/api/containers", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload)
+        });
+        message.textContent = result.message || `Container ${result.name} created.`;
+        message.className = "message success";
+        document.getElementById("createContainerForm").reset();
+        document.getElementById("containerPort").value = "80";
+        document.getElementById("restartPolicy").value = "no";
+        await loadContainers();
+        await loadSystemOverview();
+    } catch (error) {
+        message.textContent = `Could not create container: ${error.message}`;
+        message.className = "message error";
+    } finally {
+        button.disabled = false;
+        button.textContent = "Create and start container";
+    }
+}
+
+
+async function loadNetworks() {
+    const message = document.getElementById("networkMessage");
+    const rows = document.getElementById("networkRows");
+    message.textContent = "Loading Docker networks...";
+    try {
+        const data = await api("/api/networks");
+        rows.innerHTML = data.length ? data.map(n => `<tr>
+            <td><div class="name">${escapeHtml(n.name)}</div><div class="image">${escapeHtml(n.id)}</div></td>
+            <td>${escapeHtml(n.driver)}</td><td>${escapeHtml(n.scope)}</td>
+            <td>${Number(n.container_count)}${n.containers && n.containers.length ? `<div class="image">${n.containers.map(escapeHtml).join(", ")}</div>` : ""}</td>
+            <td>${n.internal ? "Yes" : "No"}</td></tr>`).join("") : '<tr><td colspan="5" class="message">No Docker networks found.</td></tr>';
+        message.textContent = `${data.length} real Docker network(s) loaded. Read-only view.`;
+    } catch (error) {
+        message.textContent = `Could not load networks: ${error.message}`;
+        rows.innerHTML = '<tr><td colspan="5" class="message">Network inventory unavailable.</td></tr>';
+    }
+}
+
+async function loadVolumes() {
+    const message = document.getElementById("volumeMessage");
+    const rows = document.getElementById("volumeRows");
+    message.textContent = "Loading Docker volumes...";
+    try {
+        const data = await api("/api/volumes");
+        rows.innerHTML = data.length ? data.map(v => `<tr>
+            <td><div class="name">${escapeHtml(v.name)}</div></td>
+            <td>${escapeHtml(v.driver)}</td><td>${escapeHtml(v.scope)}</td>
+            <td>${escapeHtml(v.created || "Unknown")}</td><td style="max-width:360px;overflow-wrap:anywhere;">${escapeHtml(v.mountpoint || "Not reported")}</td></tr>`).join("") : '<tr><td colspan="5" class="message">No Docker volumes found.</td></tr>';
+        message.textContent = `${data.length} real Docker volume(s) loaded. Read-only view; no storage was modified.`;
+    } catch (error) {
+        message.textContent = `Could not load volumes: ${error.message}`;
+        rows.innerHTML = '<tr><td colspan="5" class="message">Volume inventory unavailable.</td></tr>';
+    }
+}
+
+
+
+function getSecurityFindings(report) {
+    if (!report || typeof report !== "object") return [];
+    const keys = ["findings", "issues", "results", "violations", "warnings"];
+    return keys.flatMap(key => Array.isArray(report[key]) ? report[key] : [])
+        .map(item => typeof item === "object" && item !== null ? item : { message: String(item) });
+}
+
+function firstSecurityValue(item, keys) {
+    for (const key of keys) {
+        const value = item?.[key];
+        if (value !== undefined && value !== null && value !== "") {
+            return typeof value === "object" ? JSON.stringify(value) : String(value);
+        }
+    }
+    return "";
+}
+
+function renderComposeSecurity(report, blocked = false) {
+    const panel = document.getElementById("composeSecurityResults");
+    const summary = document.getElementById("composeSecuritySummary");
+    const findingsBox = document.getElementById("composeSecurityFindings");
+    panel.hidden = false;
+    findingsBox.replaceChildren();
+
+    if (!report || typeof report !== "object") {
+        summary.className = "security-summary neutral";
+        summary.textContent = blocked
+            ? "Compose validation was blocked. The server did not return a readable security report."
+            : "The server did not return a security report. Check the API response.";
         return;
     }
 
-    rows.innerHTML = filtered.map(c => {
-        const id = escapeHtml(c.id);
-        const name = escapeHtml(c.name);
-        const image = escapeHtml(c.image);
-        const status = escapeHtml(c.status);
-        const running = c.status === "running";
+    const isBlocked = blocked || report.blocked === true;
+    const findings = getSecurityFindings(report);
+    summary.className = "security-summary " + (isBlocked ? "blocked" : findings.length ? "warning" : "safe");
+    summary.textContent = isBlocked
+        ? "BLOCKED — security validation rejected this configuration."
+        : findings.length
+            ? "REVIEW — security findings were reported. Review them before deployment."
+            : "No findings were returned in the report. This does not guarantee the configuration is completely secure.";
 
-        return `<tr>
-            <td>
-                <div class="name">${name}</div>
-                <div class="image">${image}</div>
-            </td>
-            <td><span class="status ${statusClass(c.status)}">${status}</span></td>
-            <td>${id}</td>
-            <td><div class="actions">
-                ${!running
-                    ? `<button onclick="containerAction('${id}','start')">Start</button>`
-                    : `<button onclick="containerAction('${id}','stop')">Stop</button>`}
-                <button onclick="containerAction('${id}','restart')">Restart</button>
-                <button onclick="showDetails('${id}')">Details</button>
-                <button onclick="showLogs('${id}')">Logs</button>
-            </div></td>
-        </tr>`;
-    }).join("");
-}
+    const reportText = Object.entries(report)
+        .filter(([key, value]) => !["findings", "issues", "results", "violations", "warnings"].includes(key) && value !== null && typeof value !== "object")
+        .map(([key, value]) => `${key}: ${String(value)}`)
+        .join(" · ");
+    if (reportText) {
+        const meta = document.createElement("div");
+        meta.className = "security-meta";
+        meta.textContent = reportText;
+        findingsBox.appendChild(meta);
+    }
 
-async function containerAction(id, action) {
-    const container = containers.find(c => c.id === id);
-    if (!container) return;
+    if (!findings.length) {
+        const empty = document.createElement("div");
+        empty.className = "security-empty";
+        empty.textContent = isBlocked
+            ? "The configuration was blocked, but no individual findings were included."
+            : "No individual findings were included in this report.";
+        findingsBox.appendChild(empty);
+        return;
+    }
 
-    if (action === "stop" || action === "restart") {
-        if (!confirm(`${action.toUpperCase()} container "${container.name}"?`)) {
-            return;
+    findings.forEach((item, index) => {
+        const card = document.createElement("div");
+        card.className = "security-finding";
+        const title = document.createElement("div");
+        title.className = "security-finding-title";
+        const severity = firstSecurityValue(item, ["severity", "level", "risk"]);
+        const findingTitle = firstSecurityValue(item, ["title", "rule", "check", "code", "name"]);
+        const description = firstSecurityValue(item, ["message", "description", "detail", "finding", "reason"]);
+        const service = firstSecurityValue(item, ["service", "service_name"]);
+        const recommendation = firstSecurityValue(item, ["recommendation", "remediation", "suggestion", "fix"]);
+        title.textContent = `${severity ? `[${severity.toUpperCase()}] ` : ""}` + (findingTitle || description || `Finding ${index + 1}`);
+        card.appendChild(title);
+        if (description && description !== findingTitle) {
+            const detail = document.createElement("div");
+            detail.textContent = description;
+            card.appendChild(detail);
         }
-    }
-
-    busy = true;
-    try {
-        await api(`/api/containers/${encodeURIComponent(id)}/${action}`, {
-            method: "POST"
-        });
-        await loadContainers();
-        alert(`Docker accepted the ${action} request for ${container.name}.`);
-    } catch (error) {
-        alert(`Could not ${action} container: ${error.message}`);
-    } finally {
-        busy = false;
-    }
+        if (service) {
+            const meta = document.createElement("div");
+            meta.className = "security-meta";
+            meta.textContent = `Service: ${service}`;
+            card.appendChild(meta);
+        }
+        if (recommendation) {
+            const fix = document.createElement("div");
+            fix.className = "security-recommendation";
+            fix.textContent = `Recommended fix: ${recommendation}`;
+            card.appendChild(fix);
+        }
+        findingsBox.appendChild(card);
+    });
 }
 
-async function showDetails(id) {
-    showOutput("Container details", "Loading details...");
-    try {
-        const data = await api(`/api/containers/${encodeURIComponent(id)}`);
-        document.getElementById("outputContent").textContent =
-            JSON.stringify(data, null, 2);
-    } catch (error) {
-        document.getElementById("outputContent").textContent = error.message;
+function showComposeSecurityError(error) {
+    const report = error?.security || error?.detail?.security;
+    if (report) {
+        renderComposeSecurity(report, true);
+        return;
     }
+    const panel = document.getElementById("composeSecurityResults");
+    panel.hidden = false;
+    const summary = document.getElementById("composeSecuritySummary");
+    summary.className = "security-summary blocked";
+    summary.textContent = `Security report unavailable: ${error.message}`;
+    document.getElementById("composeSecurityFindings").replaceChildren();
 }
 
-async function showLogs(id) {
-    showOutput("Container logs", "Loading logs...");
-    try {
-        const data = await api(
-            `/api/containers/${encodeURIComponent(id)}/logs?tail=100`
-        );
-        document.getElementById("outputContent").textContent = data.logs || "(No logs returned.)";
-    } catch (error) {
-        document.getElementById("outputContent").textContent = error.message;
-    }
+function composeRequest(confirmValue=false) {
+  return {project_name:document.getElementById("composeProjectName").value.trim(), compose_yaml:document.getElementById("composeYaml").value, confirm:confirmValue};
+}
+async function validateCompose() {
+  const message = document.getElementById("composeMessage");
+  message.textContent = "Validating Compose YAML and checking security...";
+  try {
+    const result = await api("/api/compose/validate", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(composeRequest(false))});
+    renderComposeSecurity(result.security, false);
+    message.textContent = result.message || "Compose validation completed.";
+    return true;
+  } catch (error) {
+    showComposeSecurityError(error);
+    message.textContent = `Validation failed: ${error.message}`;
+    return false;
+  }
+}
+async function saveCompose() {
+  const message = document.getElementById("composeMessage");
+  message.textContent = "Validating security and saving YAML...";
+  try {
+    const result = await api("/api/compose/save", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(composeRequest(false))});
+    renderComposeSecurity(result.security, false);
+    message.textContent = `${result.message || "Compose YAML saved."} File: ${result.config_file || "saved configuration"}`;
+    await loadSavedComposeProjects();
+  } catch (error) {
+    showComposeSecurityError(error);
+    message.textContent = `Save failed: ${error.message}`;
+  }
+}
+async function deployCompose() {
+  const project = document.getElementById("composeProjectName").value.trim();
+  if (!project) { document.getElementById("composeMessage").textContent = "Enter a project name."; return; }
+  if (!confirm(`Save and deploy Compose project '${project}'? Review the YAML first. This may create or update resources belonging to this project. Continue?`)) return;
+  const message = document.getElementById("composeMessage");
+  message.textContent = "Checking security and deploying...";
+  try {
+    const result = await api("/api/compose/up", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(composeRequest(true))});
+    renderComposeSecurity(result.security, false);
+    message.textContent = `${result.output || "Compose project started."} ${result.warning || ""} Config: ${result.config_file || "saved"}`;
+    await Promise.all([loadContainers(), loadSystemOverview(), loadComposeProjects(), loadSavedComposeProjects(), loadNetworks(), loadVolumes()]);
+  } catch (error) {
+    showComposeSecurityError(error);
+    message.textContent = `Deployment failed: ${error.message}`;
+  }
+}
+async function manageSavedCompose(project, action) {
+  const verb = action === "stop" ? "stop" : "start/deploy";
+  const detail = action === "stop" ? "Containers will stop but will not be removed; networks and volumes are preserved." : "This may create or start resources described in the saved YAML.";
+  if (!confirm(`Confirm ${verb} for Compose project '${project}'? ${detail}`)) return;
+  const message = document.getElementById("savedComposeMessage");
+  message.textContent = `${verb} in progress for ${project}...`;
+  try {
+    const result = await api(`/api/compose/${encodeURIComponent(project)}/${action}?confirm=true`, {method:"POST"});
+    message.textContent = `${result.output || `Project ${action} complete.`} ${result.note || ""}`;
+    await Promise.all([loadComposeProjects(), loadSavedComposeProjects(), loadContainers(), loadSystemOverview()]);
+  } catch (error) { message.textContent = `Could not ${action} project: ${error.message}`; }
+}
+async function loadSavedComposeProjects() {
+  const message = document.getElementById("savedComposeMessage");
+  const list = document.getElementById("savedComposeList");
+  try {
+    const projects = await api("/api/compose/saved");
+    message.textContent = `${projects.length} saved Compose configuration(s). YAML files are stored on disk.`;
+    list.innerHTML = projects.length ? projects.map(p => `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin:8px 0;"><strong>${escapeHtml(p.name)}</strong><div class="subtitle" style="overflow-wrap:anywhere;">${escapeHtml(p.config_file)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button type="button" onclick="manageSavedCompose('${escapeHtml(p.name)}','start')">Start / Deploy</button><button type="button" onclick="manageSavedCompose('${escapeHtml(p.name)}','stop')">Stop (preserve resources)</button></div></div>`).join("") : '<div class="message">No saved Compose YAML files yet. Use Save YAML or Save and deploy above.</div>';
+  } catch (error) { message.textContent = `Could not load saved configurations: ${error.message}`; list.innerHTML = ""; }
+}
+async function loadComposeProjects() {
+  const message = document.getElementById("composeProjectsMessage");
+  const list = document.getElementById("composeProjectsList");
+  try {
+    const projects = await api("/api/compose/projects");
+    message.textContent = `${projects.length} Compose project(s) detected.`;
+    list.innerHTML = projects.length ? projects.map(p => `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin:8px 0;"><strong>${escapeHtml(p.name)}</strong><div class="subtitle">${p.running} running · ${p.stopped} stopped</div><div style="margin-top:8px;">${p.containers.map(c => `<div>${escapeHtml(c.name)} — ${escapeHtml(c.service)} — ${escapeHtml(c.status)}</div>`).join("")}</div></div>`).join("") : '<div class="message">No Compose-labelled containers detected yet.</div>';
+  } catch (error) { message.textContent = `Could not load projects: ${error.message}`; list.innerHTML = ""; }
 }
 
-function showOutput(title, content) {
-    document.getElementById("outputTitle").textContent = title;
-    document.getElementById("outputContent").textContent = content;
-    document.getElementById("outputPanel").hidden = false;
-    document.getElementById("outputPanel").scrollIntoView({ behavior: "smooth" });
-}
-
+loadComposeProjects();
+loadSavedComposeProjects();
 loadContainers();
+loadSystemOverview();
+loadImages();
+loadNetworks();
+loadVolumes();
+
+setInterval(loadComposeProjects, 30000);
 setInterval(loadContainers, 10000);
+setInterval(loadSystemOverview, 30000);
+setInterval(loadImages, 30000);
+setInterval(loadNetworks, 30000);
+setInterval(loadVolumes, 30000);
+
 </script>
 
-<section id="autoscaling-panel" style="margin:24px;padding:24px;border:1px solid #444;border-radius:12px;">
-  <h2>Automatic Scaling</h2>
-  <p>Project: <strong>dockpilot-scaled-demo</strong></p>
-  <p>Service: <strong>web</strong></p>
-
-  <p>Status: <strong id="as-status">Loading...</strong></p>
-  <p>Running replicas: <strong id="as-replicas">--</strong></p>
-  <p>Average CPU: <strong id="as-cpu">--</strong></p>
-  <p>Scaling policy: CPU above 70% to scale up; below 20% to scale down.</p>
-
-  <button onclick="enableDockPilotScaling()">Enable Autoscaling</button>
-  <button onclick="disableDockPilotScaling()">Disable Autoscaling</button>
-  <button onclick="refreshDockPilotScaling()">Refresh</button>
-
-  <p id="as-message" role="status"></p>
-  <h3>Recent Scaling Events</h3>
-  <ul id="as-events">
-    <li>No events loaded.</li>
-  </ul>
-</section>
-
 <script>
-async function refreshDockPilotScaling() {
-  const message = document.getElementById("as-message");
+(function(){
+ const pageNames={overview:'Overview',containers:'Containers',images:'Images',compose:'Compose Projects',storage:'Networks & Volumes',security:'Security',monitoring:'Monitoring',autoscaling:'Autoscaling',health:'Health Monitor',history:'Event History'};
+ function setupDockPilotNavigation(){
+   const main=document.querySelector('.workspace main'); if(!main || main.dataset.navReady==='1') return;
+   main.dataset.navReady='1';
+   const original=[...main.children];
+   const pages={};
+   Object.keys(pageNames).forEach((key)=>{const el=document.createElement('section');el.className='nav-page'+(key==='overview'?' active':'');el.dataset.pageContent=key;el.setAttribute('aria-label',pageNames[key]);pages[key]=el;main.appendChild(el);});
+   const move=(node,key)=>{if(node)pages[key].appendChild(node)};
+   const topline=main.querySelector('.topline');
+   const cards=main.querySelector('.cards');
+   const system=main.querySelector('#systemOverviewPanel');
+   const images=main.querySelector('#imagesPanel');
+   const create=main.querySelector('#createContainerPanel');
+   const compose=main.querySelector('#composePanel');
+   const networks=main.querySelector('#networksPanel');
+   const volumes=main.querySelector('#volumesPanel');
+   const containerTable=[...main.querySelectorAll('section.panel')].find(el=>!el.id && el.querySelector('#containerRows'));
+   const output=main.querySelector('#outputPanel');
+   const footer=main.querySelector('.footer');
+   [topline,cards,system].forEach(n=>move(n,'overview'));
+   move(containerTable,'containers'); move(create,'containers');
+   move(images,'images'); move(compose,'compose'); move(networks,'storage'); move(volumes,'storage');
+   // Any security-specific sections remain available under Security rather than disappearing.
+   original.filter(n=>n.matches && n.matches('section.panel') && ![system,images,create,compose,networks,volumes,containerTable,output].includes(n)).forEach(n=>move(n,'security'));
+   // Keep container output globally visible when opened by existing actions.
+   if(output) main.appendChild(output);
+   if(footer) main.appendChild(footer);
+   const auto=document.getElementById('autoscaling-panel'); if(auto) pages.autoscaling.appendChild(auto);
+   // Existing monitoring charts are identified by their chart canvases and moved together with their containing panel.
+   const chart=main.querySelector('#cpuChart');
+   if(chart){let p=chart.closest('section.panel')||chart.closest('.panel'); if(p && !p.closest('.nav-page')) move(p,'monitoring');}
+   // Build a dedicated Health Monitor page. The previous version had loaders but no matching DOM elements.
+   pages.health.innerHTML='<div class="page-heading"><h1>Health Monitor</h1><div class="subtitle">Live status from the configured Docker Engine</div></div>'+
+     '<section class="cards"><div class="card"><div class="card-label">Containers checked</div><div class="card-number" id="healthCount">—</div></div><div class="card"><div class="card-label">Stopped / Unhealthy</div><div class="card-number" id="healthProblems">—</div></div><div class="card"><div class="card-label">Healthy</div><div class="card-number" id="healthHealthy">—</div></div></section>'+
+     '<section class="panel"><div class="panel-head"><div><h2>Container health status</h2><div class="subtitle">Health checks and recovery are read-only here; automatic recovery remains off.</div></div><button type="button" id="refreshContainerHealthBtn">↻ Refresh health</button></div><div id="containerHealthMessage" class="message">Loading container health…</div><div class="table-wrap"><table><thead><tr><th>Container</th><th>Image</th><th>Docker state</th><th>Health</th><th>Reason</th><th>Recovery</th></tr></thead><tbody id="containerHealthRows"></tbody></table></div></section>'+
+     '<section class="panel"><div class="panel-head"><div><h2>Recent health events</h2><div class="subtitle">Stopped/unhealthy alerts and recovery attempts</div></div><button type="button" id="refreshHealthEventsBtn">↻ Refresh events</button></div><div id="healthEventsMessage" class="message">Loading health events…</div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Container</th><th>Event</th><th>Status / Recovery</th><th>Reason</th></tr></thead><tbody id="healthEventRows"></tbody></table></div></section>' ;
+   // Runtime security audit page: populated only from the live Docker audit API.
+   pages.security.innerHTML='<div class="page-heading"><h1>Runtime Container Security</h1><div class="subtitle">Read-only inspection of real Docker container configuration</div></div>'+
+     '<section class="panel"><div class="panel-head"><div><h2>Container security audit</h2><div class="subtitle">Findings are generated from the configured Docker Engine through the DockPilot API. No sample container records are used.</div></div><button type="button" id="refreshRuntimeAuditBtn">↻ Refresh audit</button></div><div id="runtimeAuditMessage" class="message" role="status" style="padding:12px 20px">Waiting to run audit…</div><div class="runtime-audit-cards" style="padding:0 20px"><div class="runtime-audit-card"><div class="runtime-audit-label">Containers scanned</div><div class="runtime-audit-value" id="runtimeAuditScanned">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Containers with findings</div><div class="runtime-audit-value" id="runtimeAuditAffected">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Critical findings</div><div class="runtime-audit-value" id="runtimeAuditCritical">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">High findings</div><div class="runtime-audit-value" id="runtimeAuditHigh">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Medium findings</div><div class="runtime-audit-value" id="runtimeAuditMedium">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Low findings</div><div class="runtime-audit-value" id="runtimeAuditLow">—</div></div></div><div class="runtime-audit-tools"><input id="runtimeAuditSearch" type="search" placeholder="Search container name, ID or image" aria-label="Search containers"><select id="runtimeAuditSeverity" aria-label="Filter findings by severity"><option value="all">All severities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option><option value="none">No findings</option></select><button type="button" id="exportRuntimeAuditBtn">Export JSON</button></div><div id="runtimeAuditResultsCount" class="runtime-audit-results-count">Run an audit to view results.</div><div id="runtimeAuditContainers" style="padding:0 20px 18px"><div class="runtime-audit-muted">Run an audit to inspect container configuration.</div></div></section>'+
+     '<section class="panel"><div class="panel-head"><div><h2>Security Audit History</h2><div class="subtitle">Previously saved read-only audit reports. Refreshing history does not run a new audit.</div></div><button type="button" id="refreshSecurityAuditHistoryBtn">↻ Refresh history</button></div><div id="securityAuditHistoryMessage" class="message" style="padding:12px 20px">Loading saved audit history…</div><div style="padding:12px 20px"><div class="chart-title">Finding trends across recent audits</div><div class="chart-subtitle">Severity totals per saved audit, oldest to newest</div><canvas id="securityAuditHistoryChart" class="chart-canvas" style="height:220px" aria-label="Security audit severity trends"></canvas></div><div class="table-wrap"><table><thead><tr><th>Audit time</th><th>Scanned</th><th>With findings</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th><th>Total findings</th><th>Report</th></tr></thead><tbody id="securityAuditHistoryRows"><tr><td colspan="9" class="message">Loading saved reports…</td></tr></tbody></table></div><div id="securityAuditReportView" style="padding:16px 20px;display:none"><div class="panel-head" style="padding:0 0 12px;border:0"><h3 style="margin:0;font-size:15px" id="securityAuditReportTitle">Saved audit report</h3><button type="button" id="closeSecurityAuditReportBtn">Close report</button></div><pre id="securityAuditReportContent" class="output-content" style="max-height:420px"></pre></div></section>';
 
-  try {
-    const [statusResponse, metricsResponse] = await Promise.all([
-      fetch("/api/autoscaling/status"),
-      fetch("/api/autoscaling/metrics?project_name=dockpilot-scaled-demo&service_name=web")
-    ]);
+   // Event history page uses persisted history APIs if they are available.
+   pages.history.innerHTML='<div class="page-heading"><h1>Event History</h1><div class="subtitle">Persisted autoscaling decisions and outcomes</div></div><section class="panel"><div class="panel-head"><div><h2>Scaling events</h2><div class="subtitle">Latest recorded scaling actions</div></div><button type="button" id="refreshHistoryBtn">↻ Refresh history</button></div><div id="historyMessage" class="message" style="padding:12px 20px">Loading event history…</div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Project / Service</th><th>Action</th><th>Replicas</th><th>Result</th><th>Reason</th></tr></thead><tbody id="historyRows"></tbody></table></div></section>';
+   // Historical metrics panel: loads persisted samples from the SQLite history API.
+   const metricsPanel=document.createElement('section');metricsPanel.className='panel';metricsPanel.innerHTML='<div class="panel-head"><div><h2>Historical resource usage</h2><div class="subtitle">CPU and memory samples saved by the autoscaling controller</div></div><button type="button" id="refreshMetricsHistoryBtn">↻ Refresh metrics</button></div><div style="padding:16px 20px"><div id="metricsHistoryMessage" class="message" style="padding:10px 0">Loading historical metrics…</div><div style="width:100%;height:280px;position:relative"><canvas id="dockpilotMetricsHistoryChart" aria-label="Historical CPU and memory usage chart" style="width:100%;height:280px"></canvas></div></div>';
+   pages.monitoring.appendChild(metricsPanel);
+   const overviewHeading=document.createElement('div');overviewHeading.className='page-heading';overviewHeading.innerHTML='<h1>Overview</h1><div class="subtitle">Docker infrastructure at a glance</div>';pages.overview.prepend(overviewHeading);
+   document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>{
+     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b===btn));
+     Object.values(pages).forEach(p=>p.classList.toggle('active',p.dataset.pageContent===btn.dataset.page));
+     if(btn.dataset.page==='history') loadDockPilotHistory();
+     if(btn.dataset.page==='health'){loadDockPilotHealth();loadDockPilotHealthEvents();}
+   }));
+   document.querySelectorAll('.nav-btn').forEach(btn=>{if(btn.dataset.page==='security')btn.addEventListener('click',()=>{loadDockPilotSecurityAudit();loadDockPilotSecurityAuditHistory()})});
+   const refreshAudit=document.getElementById('refreshRuntimeAuditBtn'); if(refreshAudit) refreshAudit.addEventListener('click',loadDockPilotSecurityAudit);
+   const auditSearch=document.getElementById('runtimeAuditSearch'); if(auditSearch) auditSearch.addEventListener('input',renderDockPilotSecurityAudit);
+   const auditSeverity=document.getElementById('runtimeAuditSeverity'); if(auditSeverity) auditSeverity.addEventListener('change',renderDockPilotSecurityAudit);
+   const auditExport=document.getElementById('exportRuntimeAuditBtn'); if(auditExport) auditExport.addEventListener('click',exportDockPilotSecurityAudit);
+   const refreshSecurityHistory=document.getElementById('refreshSecurityAuditHistoryBtn'); if(refreshSecurityHistory) refreshSecurityHistory.addEventListener('click',loadDockPilotSecurityAuditHistory);
+   const closeSecurityReport=document.getElementById('closeSecurityAuditReportBtn'); if(closeSecurityReport) closeSecurityReport.addEventListener('click',()=>{const view=document.getElementById('securityAuditReportView');if(view)view.style.display='none'});
+   const refreshHealth=document.getElementById('refreshContainerHealthBtn'); if(refreshHealth) refreshHealth.addEventListener('click',loadDockPilotHealth);
+   const refreshHealthEvents=document.getElementById('refreshHealthEventsBtn'); if(refreshHealthEvents) refreshHealthEvents.addEventListener('click',loadDockPilotHealthEvents);
+   const refresh=document.getElementById('refreshHistoryBtn'); if(refresh) refresh.addEventListener('click',loadDockPilotHistory);
+   const refreshMetrics=document.getElementById('refreshMetricsHistoryBtn'); if(refreshMetrics) refreshMetrics.addEventListener('click',loadDockPilotMetrics);
+   document.querySelectorAll('.nav-btn').forEach(btn=>{if(btn.dataset.page==='monitoring')btn.addEventListener('click',loadDockPilotMetrics)});
+ }
+ let dockPilotSecurityAuditData = null;
 
-    if (!statusResponse.ok || !metricsResponse.ok) {
-      throw new Error("Could not load autoscaling data. Check the API.");
-    }
+ async function loadDockPilotSecurityAudit(){
+   const msg=document.getElementById('runtimeAuditMessage');
+   const containerBox=document.getElementById('runtimeAuditContainers');
+   if(!msg||!containerBox)return;
+   msg.textContent='Inspecting real Docker container configurations…';
+   containerBox.replaceChildren();
+   try{
+     const response=await fetch('/api/security/container-audit',{cache:'no-store'});
+     let data;
+     try{data=await response.json()}catch{throw new Error('The audit endpoint did not return valid JSON.')}
+     if(!response.ok){const detail=data&&data.detail;throw new Error(typeof detail==='string'?detail:(detail?.message||'Security audit API returned HTTP '+response.status))}
+     if(!data||typeof data!=='object'||!Array.isArray(data.containers))throw new Error('Unexpected audit response. Expected a containers array from the runtime audit API.');
+     dockPilotSecurityAuditData=data;
+     const summary=data.findings_by_severity||data.risk_summary||{};
+     const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=String(value??0)};
+     set('runtimeAuditScanned',data.containers_scanned??data.containers.length);
+     set('runtimeAuditAffected',data.containers_with_findings??data.containers.filter(c=>(c.findings||[]).length>0).length);
+     set('runtimeAuditCritical',summary.critical);set('runtimeAuditHigh',summary.high);set('runtimeAuditMedium',summary.medium);set('runtimeAuditLow',summary.low);
+     const scannedAt=data.checked_at||data.timestamp;
+     msg.textContent='Audit completed against live Docker Engine data. '+(scannedAt?'Checked at '+scannedAt+'. ':'')+(data.read_only===true?'No containers were modified.':'Review findings before making changes.');
+     renderDockPilotSecurityAudit();
+   }catch(error){
+     dockPilotSecurityAuditData=null;
+     msg.textContent='Runtime audit unavailable: '+error.message+'. Confirm that /api/security/container-audit is implemented in manager/main.py and audit_container_security exists in manager/docker_service.py.';
+     const help=document.createElement('div');help.className='security-summary blocked';help.textContent='No security results are being shown because the live audit request failed. The page will not substitute sample findings.';
+     containerBox.replaceChildren(help);
+     const count=document.getElementById('runtimeAuditResultsCount');if(count)count.textContent='No live audit results available.';
+   }
+ }
 
-    const status = await statusResponse.json();
-    const metrics = await metricsResponse.json();
+ function renderDockPilotSecurityAudit(){
+   const data=dockPilotSecurityAuditData;
+   const box=document.getElementById('runtimeAuditContainers');
+   const count=document.getElementById('runtimeAuditResultsCount');
+   if(!data||!box)return;
+   const search=(document.getElementById('runtimeAuditSearch')?.value||'').trim().toLowerCase();
+   const severity=(document.getElementById('runtimeAuditSeverity')?.value||'all').toLowerCase();
+   box.replaceChildren();
+   let shownContainers=0, shownFindings=0;
+   const containers=data.containers.filter(container=>{
+     const haystack=[container.name,container.id,container.image,container.status].filter(Boolean).join(' ').toLowerCase();
+     return haystack.includes(search);
+   });
+   containers.forEach(container=>{
+     const findings=Array.isArray(container.findings)?container.findings:[];
+     const selectedFindings=severity==='all'?findings:findings.filter(f=>String(f.severity||'').toLowerCase()===severity);
+     if(severity==='none'&&findings.length!==0)return;
+     if(severity!=='all'&&severity!=='none'&&selectedFindings.length===0)return;
+     shownContainers++;
+     shownFindings+=selectedFindings.length;
+     const card=document.createElement('article');card.className='runtime-container';
+     const head=document.createElement('div');head.className='runtime-container-head';
+     const identity=document.createElement('div');
+     const name=document.createElement('div');name.className='runtime-finding-title';name.textContent=container.name||container.id||'Unnamed container';identity.appendChild(name);
+     const meta=document.createElement('div');meta.className='runtime-audit-muted';meta.textContent=[container.image||'Image unknown',container.status||'Status unknown',container.id?'ID: '+container.id:''].filter(Boolean).join(' · ');identity.appendChild(meta);head.appendChild(identity);
+     const level=String(container.risk_level||'low').toLowerCase();
+     const risk=document.createElement('span');risk.className='runtime-risk '+(['critical','high','medium','low'].includes(level)?level:'');risk.textContent=String(container.risk_level||'No findings').toUpperCase();head.appendChild(risk);card.appendChild(head);
+     if(!selectedFindings.length){
+       const safe=document.createElement('div');safe.className='runtime-audit-muted';safe.textContent=severity==='none'?'No findings were returned for this container. This is not a guarantee of complete security.':'No findings match this severity filter.';card.appendChild(safe);
+     }
+     selectedFindings.forEach(finding=>{
+       const details=document.createElement('details');details.className='runtime-finding-details';
+       const title=document.createElement('summary');title.textContent='['+String(finding.severity||'INFO').toUpperCase()+'] '+String(finding.check||finding.title||'Security finding');details.appendChild(title);
+       if(finding.message){const desc=document.createElement('p');desc.textContent=String(finding.message);details.appendChild(desc)}
+       if(finding.recommendation){const fix=document.createElement('p');fix.textContent='Recommendation: '+String(finding.recommendation);details.appendChild(fix)}
+       card.appendChild(details);
+     });
+     box.appendChild(card);
+   });
+   if(count)count.textContent='Showing '+shownContainers+' of '+data.containers.length+' containers · '+shownFindings+' matching findings. Export JSON downloads the complete latest audit.';
+   if(!shownContainers){const empty=document.createElement('div');empty.className='runtime-audit-muted';empty.textContent='No containers match the current search and severity filters.';box.appendChild(empty)}
+ }
 
-    document.getElementById("as-status").textContent =
-      status.status || (status.enabled ? "Enabled" : "Disabled");
+ async function loadDockPilotSecurityAuditHistory(){
+   const msg=document.getElementById('securityAuditHistoryMessage');
+   const body=document.getElementById('securityAuditHistoryRows');
+   const canvas=document.getElementById('securityAuditHistoryChart');
+   if(!msg||!body)return;
+   msg.textContent='Loading saved security audit history…';
+   try{
+     const response=await fetch('/api/security/audit-history?limit=50',{cache:'no-store'});
+     let data;try{data=await response.json()}catch{throw new Error('History API did not return valid JSON.')}
+     if(!response.ok){const detail=data&&data.detail;throw new Error(typeof detail==='string'?detail:'History API returned HTTP '+response.status)}
+     const items=Array.isArray(data)?data:(data.items||[]);
+     body.replaceChildren();
+     if(!items.length){body.innerHTML='<tr><td colspan="9" class="message">No saved security audits yet. Run “Refresh audit” above to create the first report.</td></tr>';msg.textContent='No saved security audits found.';drawSecurityAuditHistoryChart(canvas,[]);return}
+     items.forEach(item=>{
+       const tr=document.createElement('tr');
+       const values=[formatDate(item.audited_at),item.containers_scanned??0,item.containers_with_findings??0,item.critical??0,item.high??0,item.medium??0,item.low??0,item.total_findings??0];
+       values.forEach(value=>{const td=document.createElement('td');td.textContent=String(value);tr.appendChild(td)});
+       const actionCell=document.createElement('td');const button=document.createElement('button');button.type='button';button.textContent='View report';button.addEventListener('click',()=>viewSavedSecurityAudit(item.id));actionCell.appendChild(button);tr.appendChild(actionCell);body.appendChild(tr);
+     });
+     msg.textContent='Showing '+items.length+' saved audit report(s). History refresh does not contact Docker or create a new audit.';
+     drawSecurityAuditHistoryChart(canvas,items.slice().reverse());
+   }catch(error){msg.textContent='Could not load security audit history: '+error.message;body.innerHTML='<tr><td colspan="9" class="message error">History unavailable. Check /api/security/audit-history in /docs.</td></tr>';drawSecurityAuditHistoryChart(canvas,[])}
+ }
+ async function viewSavedSecurityAudit(id){
+   const view=document.getElementById('securityAuditReportView'),title=document.getElementById('securityAuditReportTitle'),content=document.getElementById('securityAuditReportContent');
+   if(!view||!title||!content)return;
+   title.textContent='Saved audit report #'+id;content.textContent='Loading saved report…';view.style.display='block';
+   try{const response=await fetch('/api/security/audit-history/'+encodeURIComponent(id),{cache:'no-store'});let data;try{data=await response.json()}catch{throw new Error('Report API did not return valid JSON.')};if(!response.ok){const detail=data&&data.detail;throw new Error(typeof detail==='string'?detail:'Report API returned HTTP '+response.status)}content.textContent=JSON.stringify(data,null,2);view.scrollIntoView({behavior:'smooth',block:'start'})}
+   catch(error){content.textContent='Could not load saved report: '+error.message}
+ }
+ function drawSecurityAuditHistoryChart(canvas,items){
+   if(!canvas)return;const rect=canvas.getBoundingClientRect();const dpr=window.devicePixelRatio||1;const w=Math.max(320,rect.width||640),h=220;canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+   const pad={l:42,r:14,t:14,b:34},pw=w-pad.l-pad.r,ph=h-pad.t-pad.b;ctx.font='11px Segoe UI, Arial';ctx.lineWidth=1;ctx.strokeStyle='#26354c';ctx.fillStyle='#9aabc2';
+   const keys=[{key:'critical',color:'#fb7185',label:'Critical'},{key:'high',color:'#f97316',label:'High'},{key:'medium',color:'#fbbf24',label:'Medium'},{key:'low',color:'#34d399',label:'Low'}];const max=Math.max(1,...items.flatMap(it=>keys.map(k=>Number(it[k.key])||0)));const scale=Math.ceil(max/4)*4;
+   for(let i=0;i<=4;i++){const y=pad.t+ph*i/4;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillText(String(Math.round(scale*(4-i)/4)),7,y+4)}
+   if(!items.length){ctx.fillStyle='#9aabc2';ctx.fillText('No saved audit data to plot yet',pad.l+8,pad.t+ph/2);return}
+   keys.forEach(series=>{ctx.strokeStyle=series.color;ctx.lineWidth=2;ctx.beginPath();items.forEach((it,i)=>{const val=Number(it[series.key])||0;const x=pad.l+(items.length===1?pw/2:i/(items.length-1)*pw);const y=pad.t+ph-(val/scale)*ph;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)});ctx.stroke()});
+   ctx.fillStyle='#9aabc2';ctx.fillText('Oldest',pad.l,h-8);ctx.fillText('Newest',w-pad.r-40,h-8);let x=pad.l;keys.forEach(k=>{ctx.fillStyle=k.color;ctx.fillRect(x,h-18,8,8);ctx.fillStyle='#9aabc2';ctx.fillText(k.label,x+12,h-10);x+=72});
+ }
 
-    document.getElementById("as-replicas").textContent =
-      metrics.running_replicas ?? "--";
+ function exportDockPilotSecurityAudit(){
+   if(!dockPilotSecurityAuditData){const msg=document.getElementById('runtimeAuditMessage');if(msg)msg.textContent='Run a successful live audit before exporting a report.';return}
+   const blob=new Blob([JSON.stringify(dockPilotSecurityAuditData,null,2)],{type:'application/json'});
+   const url=URL.createObjectURL(blob);
+   const link=document.createElement('a');
+   const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+   link.href=url;link.download='dockpilot-security-audit-'+stamp+'.json';
+   document.body.appendChild(link);link.click();link.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),1000);
+ }
 
-    document.getElementById("as-cpu").textContent =
-      metrics.average_cpu_percent == null
-        ? "Waiting for metrics"
-        : Number(metrics.average_cpu_percent).toFixed(2) + "%";
-
-    const events = document.getElementById("as-events");
-    events.replaceChildren();
-
-    (status.events || []).slice(0, 10).forEach(event => {
-      const item = document.createElement("li");
-      item.textContent = `${event.timestamp || ""} ${event.message || ""}`;
-      events.appendChild(item);
-    });
-
-    if (!events.children.length) {
-      const item = document.createElement("li");
-      item.textContent = "No scaling events yet.";
-      events.appendChild(item);
-    }
-
-    message.textContent = status.last_error
-      ? "Controller error: " + status.last_error
-      : "";
-  } catch (error) {
-    message.textContent = error.message;
-  }
-}
-
-async function enableDockPilotScaling() {
-  const message = document.getElementById("as-message");
-
-  try {
-    const response = await fetch(
-      "/api/autoscaling/enable?project_name=dockpilot-scaled-demo&service_name=web",
-      { method: "POST" }
-    );
-
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.detail || "Failed to enable autoscaling.");
-    }
-
-    message.textContent = "Autoscaling enabled.";
-    await refreshDockPilotScaling();
-  } catch (error) {
-    message.textContent = error.message;
-  }
-}
-
-async function disableDockPilotScaling() {
-  const message = document.getElementById("as-message");
-
-  try {
-    const response = await fetch("/api/autoscaling/disable", {
-      method: "POST"
-    });
-
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.detail || "Failed to disable autoscaling.");
-    }
-
-    message.textContent = "Autoscaling disabled.";
-    await refreshDockPilotScaling();
-  } catch (error) {
-    message.textContent = error.message;
-  }
-}
-
-refreshDockPilotScaling();
-setInterval(refreshDockPilotScaling, 10000);
+ async function loadDockPilotHealth(){
+   const msg=document.getElementById('containerHealthMessage'),body=document.getElementById('containerHealthRows');if(!msg||!body)return;
+   msg.textContent='Loading container health…';
+   try{
+     const r=await fetch('/api/health');if(!r.ok)throw new Error('Health API returned '+r.status);
+     const data=await r.json(),items=data.containers||[];body.innerHTML='';
+     const count=(status)=>items.filter(x=>x.status===status).length;
+     document.getElementById('healthCount').textContent=String(data.container_count??items.length);
+     document.getElementById('healthProblems').textContent=String(data.problem_count??count('stopped')+count('unhealthy'));
+     document.getElementById('healthHealthy').textContent=String(count('healthy'));
+     const noCheck=document.getElementById('healthNoCheck');if(noCheck)noCheck.textContent=String(count('running_no_healthcheck'));
+     items.forEach(item=>{const tr=document.createElement('tr');const vals=[item.name||item.id||'—',item.image||'—',item.state||'—',item.status||item.health||'—',item.reason||'—',item.recovery||'not attempted'];vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=String(v);if(i===3){td.style.fontWeight='700';td.style.color=['stopped','unhealthy'].includes(String(v))?'#fb7185':['healthy'].includes(String(v))?'#34d399':'#fbbf24'}tr.appendChild(td)});body.appendChild(tr)});
+     msg.textContent='Last checked: '+(data.checked_at||'unknown')+'. Auto-recovery is '+(data.auto_recovery_enabled?'enabled':'disabled')+'.';
+   }catch(err){msg.textContent='Could not load container health. Confirm /api/health is available in manager/main.py.';}
+ }
+ async function loadDockPilotHealthEvents(){
+   const msg=document.getElementById('healthEventsMessage'),body=document.getElementById('healthEventRows');if(!msg||!body)return;
+   msg.textContent='Loading health events…';
+   try{const r=await fetch('/api/health/events?limit=100');if(!r.ok)throw new Error('Health events API returned '+r.status);const data=await r.json(),items=data.items||[];body.innerHTML='';
+     if(!items.length){msg.textContent='No health events recorded yet.';return;}
+     items.forEach(e=>{const tr=document.createElement('tr');[e.timestamp||'—',e.container_name||e.container_id||'—',e.type||'—',e.status||e.recovery||'—',e.reason||'—'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.appendChild(td)});body.appendChild(tr)});msg.textContent='Showing '+items.length+' recent health event(s).';
+   }catch(err){msg.textContent='Could not load health events. Confirm /api/health/events is available in manager/main.py.';}
+ }
+ async function loadDockPilotMetrics(){
+   const msg=document.getElementById('metricsHistoryMessage'),canvas=document.getElementById('dockpilotMetricsHistoryChart'); if(!msg||!canvas)return;
+   msg.textContent='Loading historical metrics…';
+   try{
+     const r=await fetch('/api/autoscaling/history/metrics?project_name=dockpilot-scaled-demo&service_name=web&limit=100');
+     if(!r.ok)throw new Error('Metrics history API returned '+r.status);
+     const data=await r.json(),items=Array.isArray(data)?data:(data.items||[]);
+     if(!items.length){msg.textContent='No historical samples yet. Enable autoscaling and let the controller collect metrics.';drawMetricsChart(canvas,[]);return;}
+     msg.textContent='Showing '+items.length+' saved sample(s). CPU and memory values are percentages.';
+     drawMetricsChart(canvas,items);
+   }catch(err){msg.textContent='Could not load historical metrics. Ensure /api/autoscaling/history/metrics is enabled in manager/main.py.';drawMetricsChart(canvas,[]);}
+ }
+ function drawMetricsChart(canvas,items){
+   const rect=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1,w=Math.max(320,rect.width),h=280;
+   canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);
+   const pad={l:42,r:18,t:18,b:34},pw=w-pad.l-pad.r,ph=h-pad.t-pad.b;
+   ctx.font='12px system-ui';ctx.strokeStyle='#26354c';ctx.fillStyle='#9aabc2';ctx.lineWidth=1;
+   for(let v=0;v<=100;v+=20){const y=pad.t+ph-(v/100)*ph;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillText(v+'%',5,y+4)}
+   const series=[{key:'cpu_percent',color:'#38bdf8',label:'CPU'},{key:'memory_percent',color:'#34d399',label:'Memory'}];
+   if(items.length){series.forEach(s=>{const valid=items.map((it,i)=>({i,v:Number(it[s.key])})).filter(p=>Number.isFinite(p.v));if(!valid.length)return;ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.beginPath();valid.forEach((p,j)=>{const x=pad.l+(items.length===1?pw/2:(p.i/(items.length-1))*pw),y=pad.t+ph-(Math.max(0,Math.min(100,p.v))/100)*ph;if(j===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)});ctx.stroke()});
+     ctx.fillStyle='#9aabc2';ctx.fillText('Oldest',pad.l,h-8);ctx.fillText('Latest',w-pad.r-34,h-8);
+   }else{ctx.fillStyle='#9aabc2';ctx.fillText('No data to plot yet',pad.l+12,pad.t+ph/2)}
+   let lx=pad.l;series.forEach(s=>{ctx.fillStyle=s.color;ctx.fillRect(lx,h-18,10,3);ctx.fillStyle='#cbd5e1';ctx.fillText(s.label,lx+15,h-13);lx+=80});
+ }
+ async function loadDockPilotHistory(){
+   const body=document.getElementById('historyRows'),msg=document.getElementById('historyMessage'); if(!body||!msg)return;
+   msg.textContent='Loading event history…';
+   try{const r=await fetch('/api/autoscaling/history/events?limit=100'); if(!r.ok)throw new Error('History API returned '+r.status); const data=await r.json(); const items=Array.isArray(data)?data:(data.items||[]); body.innerHTML='';
+    if(!items.length){msg.textContent='No scaling events recorded yet. Events will appear here after the autoscaling controller records an attempt.';return;}
+    items.slice().reverse().forEach(e=>{const tr=document.createElement('tr');const vals=[e.timestamp||'—',[e.project_name,e.service_name].filter(Boolean).join(' / ')||'—',e.action||'—',`${e.previous_replicas??'—'} → ${e.target_replicas??'—'}`,e.success?'Success':'Failed',e.reason||e.error||'—'];vals.forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.appendChild(td)});body.appendChild(tr)});msg.textContent=`Showing ${items.length} recorded event(s).`;
+   }catch(err){msg.textContent='Could not load event history. Ensure the history API is enabled in manager/main.py.';}
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupDockPilotNavigation);else setupDockPilotNavigation();
+})();
 </script>
 
 </body>
+
 </html>
