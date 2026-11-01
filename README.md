@@ -39,7 +39,6 @@ Instead of juggling the CLI, separate monitoring tools, and manual security revi
 - [Testing](#-testing)
 - [Security Considerations](#-security-considerations)
 - [Roadmap](#️-roadmap)
-- [Contributing](#-contributing)
 - [Author](#-author)
 
 ---
@@ -309,23 +308,9 @@ By pairing operational visibility with security-focused capabilities and human-a
 
 ---
 
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome!
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m "Add your feature"`
-4. Push to the branch: `git push origin feature/your-feature`
-5. Open a Pull Request
-
-Please make sure the test suite passes (`python -m pytest -v`) before submitting.
-
----
-
 ## 👤 Author
 
-**Kanishka Ramesh**
+**Kanishka R**
 GitHub: [@kanishkaramesh60](https://github.com/kanishkaramesh60)
 
 *Developed as a Cybersecurity and Cloud-Native Container Management project.*
