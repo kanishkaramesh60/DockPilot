@@ -131,3 +131,41 @@ def get_scaling_history(project_name=None, limit=100):
             """, (limit,)).fetchall()
 
     return [dict(row) for row in rows]
+
+def get_all_metric_history(project_name=None, limit=100):
+    """Return the latest N historical samples per container."""
+
+    limit = max(1, min(int(limit), 1000))
+
+    with _connect() as connection:
+        if project_name:
+            rows = connection.execute("""
+                SELECT *
+                FROM (
+                    SELECT *,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY service_name
+                               ORDER BY id DESC
+                           ) AS row_num
+                    FROM metric_snapshots
+                    WHERE project_name = ?
+                )
+                WHERE row_num <= ?
+                ORDER BY id ASC
+            """, (project_name, limit)).fetchall()
+        else:
+            rows = connection.execute("""
+                SELECT *
+                FROM (
+                    SELECT *,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY project_name, service_name
+                               ORDER BY id DESC
+                           ) AS row_num
+                    FROM metric_snapshots
+                )
+                WHERE row_num <= ?
+                ORDER BY id ASC
+            """, (limit,)).fetchall()
+
+    return [dict(row) for row in rows]

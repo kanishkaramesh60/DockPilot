@@ -43,7 +43,8 @@ from security_audit_history import (
     list_security_audits,
     get_security_audit,
 )
-
+from contextlib import asynccontextmanager
+from metrics_collector import start_metrics_collector, stop_metrics_collector
 from resilience_lab import (
     is_eligible_container,
     validate_experiment_target,
@@ -51,8 +52,14 @@ from resilience_lab import (
     get_experiment_history,
     utc_now,
 )
-
-
+import threading
+from metrics_history import (
+    initialize_history,
+    record_metrics,
+    get_all_metric_history,
+    get_metric_history,
+)
+from failure_predictor import analyze_all_containers
 # --------------------------------------------------
 # REQUEST MODELS
 # --------------------------------------------------
@@ -91,7 +98,14 @@ class ResilienceExperimentRequest(BaseModel):
 # --------------------------------------------------
 # APPLICATION
 # --------------------------------------------------
-
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_metrics_collector()
+    try:
+        yield
+    finally:
+        stop_metrics_collector()
+        
 app = FastAPI(
     title="DockPilot API",
     description=(
@@ -100,10 +114,147 @@ app = FastAPI(
         "and controlled resilience experiments."
     ),
     version="1.0.0",
+    lifespan=lifespan,
 )
+initialize_history()
+
+_metrics_history_lock = threading.Lock()
+
+# --------------------------------------------------
+# HISTORICAL DOCKER METRICS
+# --------------------------------------------------
+
+@app.get("/api/autoscaling/history/metrics")
+def historical_metrics(
+    project_name: str = Query(default="dockpilot"),
+    service_name: str = Query(default="all"),
+    limit: int = Query(default=100, ge=1, le=1000),
+):
+    """
+    Collect current metrics from running Docker containers
+    and return saved historical CPU and memory samples.
+
+    This endpoint does not enable or control autoscaling.
+    A sample is recorded when this endpoint is requested.
+    """
+    client = None
+
+    try:
+        client = get_docker_client()
+
+        with _metrics_history_lock:
+            for container in client.containers.list(all=False):
+                try:
+                    stats = container.stats(stream=False)
+
+                    # CPU usage percentage
+                    cpu_stats = stats.get("cpu_stats", {})
+                    precpu_stats = stats.get("precpu_stats", {})
+
+                    cpu_usage = cpu_stats.get("cpu_usage", {})
+                    precpu_usage = precpu_stats.get("cpu_usage", {})
+
+                    cpu_delta = (
+                        cpu_usage.get("total_usage", 0)
+                        - precpu_usage.get("total_usage", 0)
+                    )
+
+                    system_delta = (
+                        cpu_stats.get("system_cpu_usage", 0)
+                        - precpu_stats.get("system_cpu_usage", 0)
+                    )
+
+                    online_cpus = (
+                        cpu_stats.get("online_cpus")
+                        or len(cpu_usage.get("percpu_usage", []) or [])
+                        or 1
+                    )
+
+                    if system_delta > 0 and cpu_delta >= 0:
+                        cpu_percent = (
+                            cpu_delta / system_delta
+                        ) * online_cpus * 100
+                    else:
+                        cpu_percent = 0.0
+
+                    # Memory usage percentage
+                    memory_stats = stats.get("memory_stats", {})
+                    memory_usage = memory_stats.get("usage", 0)
+                    memory_limit = memory_stats.get("limit", 0)
+
+                    memory_percent = (
+                        memory_usage / memory_limit * 100
+                        if memory_limit > 0
+                        else 0.0
+                    )
+
+                    # Save one sample for this container.
+                    record_metrics(
+                        project_name=project_name,
+                        service_name=container.name,
+                        cpu_percent=round(cpu_percent, 2),
+                        memory_percent=round(memory_percent, 2),
+                        running_replicas=1,
+                    )
+
+                except Exception:
+                    # One container's stats failure should not
+                    # prevent metrics from other containers being saved.
+                    continue
+
+        # "all" returns samples for every container recorded under
+        # this project name. A specific service filters by its name.
+        if service_name.lower() == "all":
+            items = get_all_metric_history(
+                project_name=project_name,
+                limit=limit,
+            )
+        else:
+            items = get_metric_history(
+                project_name=project_name,
+                service_name=service_name,
+                limit=limit,
+            )
+
+        return {"items": items}
+
+    except DockerException as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not collect Docker metrics: {exc}",
+        ) from exc
+
+    finally:
+        if client is not None:
+            client.close()
+
 
 COMPOSE_ROOT = Path(__file__).resolve().parent.parent / "compose_projects"
 
+# --------------------------------------------------
+# PREDICTIVE CONTAINER FAILURE DETECTION
+# --------------------------------------------------
+
+@app.get("/api/predictions/container-failures")
+def predict_container_failures(
+    project_name: str = Query(default="dockpilot"),
+    limit: int = Query(default=100, ge=3, le=1000),
+):
+    """
+    Analyze historical Docker CPU and memory metrics
+    to identify containers showing early warning signs.
+    """
+
+    metric_items = get_all_metric_history(
+        project_name=project_name,
+        limit=limit,
+    )
+
+    result = analyze_all_containers(metric_items)
+
+    result["project_name"] = project_name
+
+    return result
 
 # --------------------------------------------------
 # HEALTH MONITORING
