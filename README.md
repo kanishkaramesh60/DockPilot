@@ -55,9 +55,7 @@ Instead of juggling the CLI, separate monitoring tools, and manual security revi
 | 🔮 | **Predictive Failure Detection** | Analyze metrics to spot abnormal utilization patterns and flag likely failures before they happen. |
 | ❤️ | **Health Monitoring** | Detect unhealthy, restarting, and repeatedly crashing containers, with a record of health events. |
 | 🧾 | **Compose Management & Security** | Create and validate Docker Compose files, flagging risky settings before deployment. |
-| 📈 | **Intelligent Autoscaling** | CPU-based scale-up/scale-down with min/max replica limits and cooldown periods. |
 | 🛡️ | **Runtime Security Auditing** | Run security checks on containers and keep a searchable audit history. |
-| 🧪 | **Resilience Testing** | Run controlled failure experiments and observe how containers recover. |
 | 🚨 | **Incident Intelligence** | Detect, investigate, and recover from incidents with human-approved actions. |
 
 <details>
@@ -99,25 +97,11 @@ Instead of juggling the CLI, separate monitoring tools, and manual security revi
   - ⚠️ Sensitive host-path mounts
   - ⚠️ Docker socket mounts
 
-### 6. Intelligent Container Autoscaling
-- Monitors container resource utilization
-- Applies CPU-based scaling policies
-- Supports scale-up and scale-down decisions
-- Configurable minimum and maximum replica limits
-- Cooldown periods to prevent flapping
-- Maintains autoscaling status and event history
-
-### 7. Runtime Docker Security Auditing
+### 6. Runtime Docker Security Auditing
 - Performs security checks on Docker containers
 - Identifies potential configuration risks
 - Maintains security audit history
 - Provides visibility into detected issues
-
-### 8. Container Resilience Testing
-- Controlled container resilience experiments
-- Observes container behavior during failure scenarios
-- Evaluates recovery behavior
-- Maintains experiment history
 
 </details>
 
@@ -174,20 +158,18 @@ flowchart TB
     DS[docker_service]
     MC[metrics_collector]
     FP[failure_predictor]
-    AS[autoscaling_service]
     CS[compose_security]
     IE[incident_engine /<br/>incident_recovery]
     DB[(SQLite)]
     DE[🐳 Docker Engine]
 
     UI <--> API
-    API --> DS & MC & FP & AS & CS & IE
+    API --> DS & MC & FP & CS & IE
     DS --> DE
     MC --> DE
     MC --> DB
     FP --> DB
     IE --> DB
-    AS --> DE
 ```
 
 ### Project Structure
@@ -202,13 +184,11 @@ DockPilot/
 │   ├── docker_service.py           # Docker Engine operations
 │   ├── metrics_collector.py        # CPU / memory / network collection
 │   ├── metrics_history.py          # Historical metrics storage
-│   ├── autoscaling_service.py      # CPU-based autoscaling policies
 │   ├── compose_security.py         # Compose validation & risk detection
 │   ├── container_health.py         # Health & restart monitoring
 │   ├── failure_predictor.py        # Predictive failure detection
 │   ├── incident_engine.py          # Incident detection & investigation
 │   ├── incident_recovery.py        # Approved recovery & verification
-│   ├── resilience_lab.py           # Resilience experiments
 │   ├── security_audit_history.py   # Security audit records
 │   └── requirements.txt
 │
@@ -346,7 +326,7 @@ python -m pytest -v
 
 ## 🎯 Project Objective
 
-DockPilot aims to provide a centralized platform that combines container management, resource monitoring, predictive failure detection, security auditing, autoscaling, and guided incident recovery.
+DockPilot aims to provide a centralized platform that combines container management, resource monitoring, predictive failure detection, security auditing, and guided incident recovery.
 
 By pairing operational visibility with security-focused capabilities and human-approved recovery workflows, it makes container management **more efficient, more reliable, and more secure**.
 
