@@ -14,7 +14,7 @@ from docker.errors import DockerException
 
 from docker_service import get_docker_client
 from metrics_history import record_metrics
-
+from incident_engine import scan_for_incidents
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -120,6 +120,14 @@ def _collector_loop():
         try:
             count = collect_container_metrics()
             logger.info("Collected metrics for %s containers", count)
+            try:
+                incidents = scan_for_incidents()
+                logger.info(
+                "Incident scan detected %s issue(s)",
+                len(incidents)
+            )
+            except Exception:
+                logger.exception("Automatic incident scan failed")
 
         except Exception:
             logger.exception("Unexpected metrics collector error")

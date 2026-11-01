@@ -52,6 +52,17 @@ from resilience_lab import (
     get_experiment_history,
     utc_now,
 )
+from incident_engine import (
+    initialize_incidents,
+    scan_for_incidents,
+    get_incidents,
+)
+from incident_recovery import (
+    initialize_recovery,
+    create_recommendation,
+    execute_approved_recovery,
+    get_recovery_history,
+)
 import threading
 from metrics_history import (
     initialize_history,
@@ -94,7 +105,10 @@ class ResilienceExperimentRequest(BaseModel):
     container_id: str = Field(min_length=1, max_length=128)
     confirm: bool = False
 
-
+class IncidentRecoveryApproval(BaseModel):
+    action_id: str = Field(min_length=36, max_length=36)
+    approved: bool
+    
 # --------------------------------------------------
 # APPLICATION
 # --------------------------------------------------
@@ -117,6 +131,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 initialize_history()
+initialize_incidents()
+initialize_recovery()
 
 _metrics_history_lock = threading.Lock()
 
@@ -271,7 +287,65 @@ def container_health_events(
 ):
     return {"items": get_recent_health_events(limit=limit)}
 
+@app.get("/api/incidents")
+def api_get_incidents(
+    limit: int = Query(default=100, ge=1, le=500)
+):
+    return {"items": get_incidents(limit=limit)}
 
+
+@app.post("/api/incidents/scan")
+def api_scan_incidents():
+    try:
+        items = scan_for_incidents()
+        return {
+            "message": "Incident scan completed",
+            "detected_count": len(items),
+            "items": items,
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Incident scan failed: {exc}"
+        )
+
+@app.post("/api/incidents/{incident_id}/recommendation")
+def api_incident_recommendation(incident_id: int):
+    try:
+        return create_recommendation(incident_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Recommendation failed: {exc}"
+        )
+
+
+@app.post("/api/incidents/recovery/approve")
+def api_approve_incident_recovery(request: IncidentRecoveryApproval):
+    if not request.approved:
+        raise HTTPException(
+            status_code=400,
+            detail="Explicit approval is required."
+        )
+
+    try:
+        return execute_approved_recovery(request.action_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Recovery failed: {exc}"
+        )
+
+
+@app.get("/api/incidents/recovery/history")
+def api_incident_recovery_history(
+    limit: int = Query(default=100, ge=1, le=500)
+):
+    return {"items": get_recovery_history(limit=limit)}
 # --------------------------------------------------
 # RESILIENCE LAB
 # --------------------------------------------------
