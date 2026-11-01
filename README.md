@@ -6,14 +6,13 @@
 
 **Monitor → Detect → Investigate → Recommend → Approve → Recover → Verify → Record**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://dockpilot-8vlo.onrender.com)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Tests](https://img.shields.io/badge/Tests-Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org/)
 
-[**🌐 Live Demo**](https://dockpilot-8vlo.onrender.com) · [**📖 API Docs**](#-api-documentation) · [**🚀 Quick Start**](#-quick-start) · [**🗺️ Roadmap**](#️-roadmap)
+[**📖 API Docs**](#-api-documentation) · [**🚀 Quick Start**](#-quick-start) · [**🗺️ Roadmap**](#️-roadmap)
 
 </div>
 
@@ -37,7 +36,6 @@ Instead of juggling the CLI, separate monitoring tools, and manual security revi
 - [Architecture](#️-architecture)
 - [Quick Start](#-quick-start)
 - [API Documentation](#-api-documentation)
-- [Deployment](#-deployment-on-render)
 - [Testing](#-testing)
 - [Security Considerations](#-security-considerations)
 - [Roadmap](#️-roadmap)
@@ -144,7 +142,6 @@ flowchart LR
 | **Database** | SQLite |
 | **Visualization** | JavaScript Charts |
 | **Testing** | Pytest |
-| **Deployment** | Render |
 | **Version Control** | Git, GitHub |
 
 ---
@@ -265,26 +262,6 @@ DockPilot is built on FastAPI, so interactive API documentation is generated aut
 Once the server is running, visit:
 
 - **Swagger UI:** `http://127.0.0.1:8001/docs`
-
----
-
-## ☁️ Deployment on Render
-
-The FastAPI web application is deployed on **Render**.
-
-| Setting | Value |
-|---|---|
-| Service Type | Web Service |
-| Runtime | Python 3 |
-| Branch | `main` |
-| Root Directory | *(blank)* |
-| Build Command | `pip install -r manager/requirements.txt` |
-| Start Command | `cd manager && uvicorn main:app --host 0.0.0.0 --port $PORT` |
-
-**🔗 Live application:** https://dockpilot-8vlo.onrender.com
-
-> [!NOTE]
-> The hosted dashboard and backend run separately from any Docker Engine on your local machine. Remote container management requires a separately configured, **secure** Docker Engine connection. Local SQLite data also needs persistent storage to survive ephemeral hosting restarts.
 
 ---
 
