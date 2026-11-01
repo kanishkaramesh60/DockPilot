@@ -627,6 +627,7 @@ tr:last-child td { border-bottom: 0; }
 <button class="nav-btn" data-page="security"><span class="nav-icon">◇</span>Security</button>
 <button class="nav-btn" data-page="monitoring"><span class="nav-icon">⌁</span>Monitoring</button>
 <button class="nav-btn" data-page="health"><span class="nav-icon">♥</span>Health Monitor</button>
+<button class="nav-btn" data-page="incidents"><span class="nav-icon">!</span>Incident Intelligence</button>
 <button class="nav-btn" data-page="history"><span class="nav-icon">◷</span>Event History</button>
 </nav>
 <div class="workspace">
@@ -1852,7 +1853,7 @@ setInterval(loadVolumes, 30000);
 
 <script>
 (function(){
- const pageNames={overview:'Overview',containers:'Containers',images:'Images',compose:'Compose Projects',storage:'Networks & Volumes',security:'Security',monitoring:'Monitoring',health:'Health Monitor',history:'Event History'};
+ const pageNames={overview:'Overview',containers:'Containers',images:'Images',compose:'Compose Projects',storage:'Networks & Volumes',security:'Security',monitoring:'Monitoring',health:'Health Monitor',incidents:'Incident Intelligence',history:'Event History'};
  function setupDockPilotNavigation(){
    const main=document.querySelector('.workspace main'); if(!main || main.dataset.navReady==='1') return;
    main.dataset.navReady='1';
@@ -1893,6 +1894,13 @@ setInterval(loadVolumes, 30000);
      '<section class="panel"><div class="panel-head"><div><h2>Container security audit</h2><div class="subtitle">Findings are generated from the configured Docker Engine through the DockPilot API. No sample container records are used.</div></div><button type="button" id="refreshRuntimeAuditBtn">↻ Refresh audit</button></div><div id="runtimeAuditMessage" class="message" role="status" style="padding:12px 20px">Waiting to run audit…</div><div class="runtime-audit-cards" style="padding:0 20px"><div class="runtime-audit-card"><div class="runtime-audit-label">Containers scanned</div><div class="runtime-audit-value" id="runtimeAuditScanned">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Containers with findings</div><div class="runtime-audit-value" id="runtimeAuditAffected">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Critical findings</div><div class="runtime-audit-value" id="runtimeAuditCritical">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">High findings</div><div class="runtime-audit-value" id="runtimeAuditHigh">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Medium findings</div><div class="runtime-audit-value" id="runtimeAuditMedium">—</div></div><div class="runtime-audit-card"><div class="runtime-audit-label">Low findings</div><div class="runtime-audit-value" id="runtimeAuditLow">—</div></div></div><div class="runtime-audit-tools"><input id="runtimeAuditSearch" type="search" placeholder="Search container name, ID or image" aria-label="Search containers"><select id="runtimeAuditSeverity" aria-label="Filter findings by severity"><option value="all">All severities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option><option value="none">No findings</option></select><button type="button" id="exportRuntimeAuditBtn">Export JSON</button></div><div id="runtimeAuditResultsCount" class="runtime-audit-results-count">Run an audit to view results.</div><div id="runtimeAuditContainers" style="padding:0 20px 18px"><div class="runtime-audit-muted">Run an audit to inspect container configuration.</div></div></section>'+
      '<section class="panel"><div class="panel-head"><div><h2>Security Audit History</h2><div class="subtitle">Previously saved read-only audit reports. Refreshing history does not run a new audit.</div></div><button type="button" id="refreshSecurityAuditHistoryBtn">↻ Refresh history</button></div><div id="securityAuditHistoryMessage" class="message" style="padding:12px 20px">Loading saved audit history…</div><div style="padding:12px 20px"><div class="chart-title">Finding trends across recent audits</div><div class="chart-subtitle">Severity totals per saved audit, oldest to newest</div><canvas id="securityAuditHistoryChart" class="chart-canvas" style="height:220px" aria-label="Security audit severity trends"></canvas></div><div class="table-wrap"><table><thead><tr><th>Audit time</th><th>Scanned</th><th>With findings</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th><th>Total findings</th><th>Report</th></tr></thead><tbody id="securityAuditHistoryRows"><tr><td colspan="9" class="message">Loading saved reports…</td></tr></tbody></table></div><div id="securityAuditReportView" style="padding:16px 20px;display:none"><div class="panel-head" style="padding:0 0 12px;border:0"><h3 style="margin:0;font-size:15px" id="securityAuditReportTitle">Saved audit report</h3><button type="button" id="closeSecurityAuditReportBtn">Close report</button></div><pre id="securityAuditReportContent" class="output-content" style="max-height:420px"></pre></div></section>';
 
+   // Incident Intelligence: live incidents, evidence, approved recovery, and recovery history.
+   pages.incidents.innerHTML='<div class="page-heading"><h1>Incident Intelligence</h1><div class="subtitle">Detect, investigate, recommend, approve, recover, and verify Docker incidents. Recovery actions always require explicit human approval.</div></div>'+
+     '<section class="cards"><div class="card"><div class="card-label">Open incidents</div><div class="card-number" id="incidentOpenCount">—</div></div><div class="card"><div class="card-label">Critical / High</div><div class="card-number" id="incidentHighCount">—</div></div><div class="card"><div class="card-label">Recovery actions</div><div class="card-number" id="incidentRecoveryCount">—</div></div></section>'+
+     '<section class="panel"><div class="panel-head"><div><h2>Detected incidents</h2><div class="subtitle">Incident records and evidence collected from the configured Docker Engine</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="scanIncidentsBtn">Scan now</button><button type="button" id="refreshIncidentsBtn">↻ Refresh</button></div></div><div id="incidentsMessage" class="message" role="status">Loading incidents…</div><div class="table-wrap"><table><thead><tr><th>First detected</th><th>Container</th><th>Incident</th><th>Severity</th><th>Status</th><th>Summary</th><th>Details</th></tr></thead><tbody id="incidentRows"></tbody></table></div></section>'+
+     '<section class="panel" id="incidentInvestigationPanel" hidden><div class="panel-head"><div><h2>Incident investigation</h2><div class="subtitle" id="incidentDetailSubtitle">Select an incident to inspect its evidence</div></div><button type="button" id="closeIncidentDetailsBtn">Close</button></div><div style="padding:16px 20px"><div id="incidentRootCause" class="security-summary neutral">Select an incident to view root-cause analysis.</div><div class="security-finding"><div class="security-finding-title">Collected evidence</div><pre id="incidentEvidence" class="output-content" style="max-height:300px;margin-top:8px"></pre></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button type="button" id="recommendRecoveryBtn">Generate recovery recommendation</button></div><div id="incidentRecommendation" style="margin-top:14px" aria-live="polite"></div></div></section>'+
+     '<section class="panel"><div class="panel-head"><div><h2>Recovery history</h2><div class="subtitle">Recorded recommendations, approvals, execution results, and verification outcomes</div></div><button type="button" id="refreshRecoveryHistoryBtn">↻ Refresh history</button></div><div id="recoveryHistoryMessage" class="message">Loading recovery history…</div><div class="table-wrap"><table><thead><tr><th>Created</th><th>Container ID</th><th>Action</th><th>Status</th><th>Approved</th><th>Completed</th><th>Result</th></tr></thead><tbody id="recoveryHistoryRows"></tbody></table></div></section>';
+
    // Event History: container health events only.
    pages.history.innerHTML='<div class="page-heading"><h1>Event History</h1><div class="subtitle">Recorded container health, unhealthy-state, and recovery events</div></div>'+
      '<section class="panel"><div class="panel-head"><div><h2>Container health events</h2><div class="subtitle">Stopped/unhealthy alerts and recovery records</div></div><button type="button" id="refreshHistoryHealthBtn">↻ Refresh</button></div><div id="historyHealthMessage" class="message">Loading health events…</div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Container</th><th>Event</th><th>Status / Recovery</th><th>Reason</th></tr></thead><tbody id="historyHealthRows"></tbody></table></div></section>';
@@ -1908,6 +1916,7 @@ setInterval(loadVolumes, 30000);
      Object.values(pages).forEach(p=>p.classList.toggle('active',p.dataset.pageContent===btn.dataset.page));
      if(btn.dataset.page==='history'){loadDockPilotHistoryHealth();}
      if(btn.dataset.page==='health'){loadDockPilotHealth();loadDockPilotHealthEvents();}
+     if(btn.dataset.page==='incidents'){loadDockPilotIncidents();loadDockPilotRecoveryHistory();}
    }));
    document.querySelectorAll('.nav-btn').forEach(btn=>{if(btn.dataset.page==='security')btn.addEventListener('click',()=>{loadDockPilotSecurityAudit();loadDockPilotSecurityAuditHistory()})});
    const refreshAudit=document.getElementById('refreshRuntimeAuditBtn'); if(refreshAudit) refreshAudit.addEventListener('click',loadDockPilotSecurityAudit);
@@ -1919,10 +1928,151 @@ setInterval(loadVolumes, 30000);
    const refreshHealth=document.getElementById('refreshContainerHealthBtn'); if(refreshHealth) refreshHealth.addEventListener('click',loadDockPilotHealth);
    const refreshHealthEvents=document.getElementById('refreshHealthEventsBtn'); if(refreshHealthEvents) refreshHealthEvents.addEventListener('click',loadDockPilotHealthEvents);
    const refreshHistoryHealth=document.getElementById('refreshHistoryHealthBtn'); if(refreshHistoryHealth) refreshHistoryHealth.addEventListener('click',loadDockPilotHistoryHealth);
+   const refreshIncidents=document.getElementById('refreshIncidentsBtn'); if(refreshIncidents) refreshIncidents.addEventListener('click',loadDockPilotIncidents);
+   const scanIncidents=document.getElementById('scanIncidentsBtn'); if(scanIncidents) scanIncidents.addEventListener('click',scanDockPilotIncidents);
+   const refreshRecoveryHistory=document.getElementById('refreshRecoveryHistoryBtn'); if(refreshRecoveryHistory) refreshRecoveryHistory.addEventListener('click',loadDockPilotRecoveryHistory);
+   const closeIncidentDetails=document.getElementById('closeIncidentDetailsBtn'); if(closeIncidentDetails) closeIncidentDetails.addEventListener('click',()=>{document.getElementById('incidentInvestigationPanel').hidden=true;selectedDockPilotIncident=null;currentDockPilotRecommendation=null;});
+   const recommendRecovery=document.getElementById('recommendRecoveryBtn'); if(recommendRecovery) recommendRecovery.addEventListener('click',createDockPilotRecoveryRecommendation);
    const refreshPredictions=document.getElementById('refreshPredictionsBtn'); if(refreshPredictions) refreshPredictions.addEventListener('click',loadDockPilotPredictions);
    const refreshMetrics=document.getElementById('refreshMetricsHistoryBtn'); if(refreshMetrics) refreshMetrics.addEventListener('click',loadDockPilotMetrics);
    document.querySelectorAll('.nav-btn').forEach(btn=>{if(btn.dataset.page==='monitoring')btn.addEventListener('click',()=>{loadDockPilotMetrics();loadDockPilotPredictions()})});
  }
+ let selectedDockPilotIncident = null;
+ let currentDockPilotRecommendation = null;
+ let dockPilotIncidentCache = [];
+
+ function incidentSeverityClass(value){
+   const severity=String(value||'').toLowerCase();
+   if(severity==='critical'||severity==='high')return 'blocked';
+   if(severity==='medium')return 'warning';
+   return 'neutral';
+ }
+
+ async function loadDockPilotIncidents(){
+   const message=document.getElementById('incidentsMessage');
+   const body=document.getElementById('incidentRows');
+   if(!message||!body)return;
+   message.textContent='Loading incident records from DockPilot…';
+   body.replaceChildren();
+   try{
+     const data=await api('/api/incidents?limit=200',{cache:'no-store'});
+     const items=Array.isArray(data.items)?data.items:[];
+     dockPilotIncidentCache=items;
+     const open=items.filter(item=>String(item.status).toLowerCase()==='open').length;
+     const high=items.filter(item=>['critical','high'].includes(String(item.severity||'').toLowerCase())).length;
+     const openEl=document.getElementById('incidentOpenCount'); if(openEl)openEl.textContent=String(open);
+     const highEl=document.getElementById('incidentHighCount'); if(highEl)highEl.textContent=String(high);
+     if(!items.length){
+       const row=document.createElement('tr');const cell=document.createElement('td');cell.colSpan=7;cell.className='message';cell.textContent='No incidents have been recorded. Use Scan now to inspect current Docker containers.';row.appendChild(cell);body.appendChild(row);
+     }else{
+       items.forEach(item=>{
+         const row=document.createElement('tr');
+         const values=[formatDate(item.first_seen),item.container_name||item.container_id||'—',item.incident_type||'—',item.severity||'—',item.status||'—',item.summary||'—'];
+         values.forEach((value,index)=>{
+           const cell=document.createElement('td');cell.textContent=String(value);
+           if(index===3){cell.style.fontWeight='700';cell.style.color=['critical','high'].includes(String(value).toLowerCase())?'#fda4af':String(value).toLowerCase()==='medium'?'#fde68a':'#a7f3d0';}
+           row.appendChild(cell);
+         });
+         const actionCell=document.createElement('td');const button=document.createElement('button');button.type='button';button.textContent='Investigate';button.dataset.incidentId=String(item.id);button.addEventListener('click',()=>showDockPilotIncident(item.id));actionCell.appendChild(button);row.appendChild(actionCell);body.appendChild(row);
+       });
+     }
+     message.textContent='Showing '+items.length+' incident record(s). '+open+' currently open.';
+   }catch(error){message.textContent='Could not load incidents: '+error.message;}
+ }
+
+ async function scanDockPilotIncidents(){
+   const message=document.getElementById('incidentsMessage');
+   if(message)message.textContent='Scanning current Docker containers for incidents…';
+   try{
+     const result=await api('/api/incidents/scan',{method:'POST'});
+     if(message)message.textContent='Incident scan completed. Detected '+(result.detected_count??0)+' incident(s).';
+     await loadDockPilotIncidents();
+   }catch(error){if(message)message.textContent='Incident scan failed: '+error.message;}
+ }
+
+ function showDockPilotIncident(incidentId){
+   const incident=dockPilotIncidentCache.find(item=>String(item.id)===String(incidentId));
+   if(!incident)return;
+   selectedDockPilotIncident=incident;
+   currentDockPilotRecommendation=null;
+   const panel=document.getElementById('incidentInvestigationPanel');
+   const subtitle=document.getElementById('incidentDetailSubtitle');
+   const root=document.getElementById('incidentRootCause');
+   const evidence=document.getElementById('incidentEvidence');
+   const recommendation=document.getElementById('incidentRecommendation');
+   const recommendButton=document.getElementById('recommendRecoveryBtn');
+   if(panel)panel.hidden=false;
+   if(subtitle)subtitle.textContent=(incident.container_name||incident.container_id)+' · '+(incident.incident_type||'incident')+' · '+(incident.severity||'unknown');
+   const details=incident.evidence||{};
+   if(root){root.className='security-summary '+incidentSeverityClass(incident.severity);root.textContent=details.root_cause||incident.summary||'No root-cause explanation was recorded.';}
+   if(evidence)evidence.textContent=JSON.stringify(details,null,2);
+   if(recommendation)recommendation.replaceChildren();
+   if(recommendButton)recommendButton.disabled=String(incident.status).toLowerCase()!=='open';
+   panel?.scrollIntoView({behavior:'smooth',block:'start'});
+ }
+
+ async function createDockPilotRecoveryRecommendation(){
+   if(!selectedDockPilotIncident)return;
+   const output=document.getElementById('incidentRecommendation');
+   const button=document.getElementById('recommendRecoveryBtn');
+   if(button)button.disabled=true;
+   if(output)output.textContent='Generating recommendation…';
+   try{
+     const result=await api('/api/incidents/'+encodeURIComponent(selectedDockPilotIncident.id)+'/recommendation',{method:'POST'});
+     currentDockPilotRecommendation=result;
+     if(output){
+       output.replaceChildren();
+       const card=document.createElement('div');card.className='security-finding';
+       const title=document.createElement('div');title.className='security-finding-title';title.textContent='Recommended action: '+(result.recommended_action||'manual review');card.appendChild(title);
+       const description=document.createElement('div');description.className='security-recommendation';description.textContent=result.recommendation||'No recommendation details returned.';card.appendChild(description);
+       const state=document.createElement('div');state.className='security-meta';state.textContent='Status: '+(result.status||'unknown')+' · Approval required: '+(result.approval_required?'Yes':'No');card.appendChild(state);
+       if(result.approval_required&&result.status==='pending_approval'){
+         const approve=document.createElement('button');approve.type='button';approve.textContent='Approve and execute recovery';approve.style.marginTop='12px';approve.addEventListener('click',approveDockPilotRecovery);card.appendChild(approve);
+       }else if(!result.executable){
+         const note=document.createElement('div');note.className='security-meta';note.textContent='This incident requires manual investigation; no automatic action is available.';card.appendChild(note);
+       }
+       output.appendChild(card);
+     }
+   }catch(error){if(output)output.textContent='Could not generate recommendation: '+error.message;}
+   finally{if(button)button.disabled=String(selectedDockPilotIncident?.status).toLowerCase()!=='open';}
+ }
+
+ async function approveDockPilotRecovery(event){
+   const recommendation=currentDockPilotRecommendation;
+   if(!recommendation||!recommendation.action_id)return;
+   if(!confirm('Approve the recommended '+recommendation.recommended_action+' action for '+(recommendation.container_name||'this container')+'? This will perform a real Docker operation.'))return;
+   const button=event?.currentTarget;
+   if(button)button.disabled=true;
+   const output=document.getElementById('incidentRecommendation');
+   if(output){const status=document.createElement('div');status.className='security-meta';status.textContent='Executing approved recovery and verifying container state…';output.appendChild(status);}
+   try{
+     const result=await api('/api/incidents/recovery/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action_id:recommendation.action_id,approved:true})});
+     if(output){const resultBox=document.createElement('div');resultBox.className='security-summary '+(result.status==='verified'?'safe':result.status==='completed_degraded'?'warning':'blocked');resultBox.style.marginTop='12px';resultBox.textContent='Recovery result: '+result.status+'. '+(result.message||'');output.appendChild(resultBox);}
+     await Promise.all([loadDockPilotIncidents(),loadDockPilotRecoveryHistory()]);
+   }catch(error){if(output){const errorBox=document.createElement('div');errorBox.className='security-summary blocked';errorBox.style.marginTop='12px';errorBox.textContent='Recovery request failed: '+error.message;output.appendChild(errorBox);}if(button)button.disabled=false;}
+ }
+
+ async function loadDockPilotRecoveryHistory(){
+   const message=document.getElementById('recoveryHistoryMessage');
+   const body=document.getElementById('recoveryHistoryRows');
+   if(!message||!body)return;
+   message.textContent='Loading saved recovery actions…';body.replaceChildren();
+   try{
+     const data=await api('/api/incidents/recovery/history?limit=200',{cache:'no-store'});
+     const items=Array.isArray(data.items)?data.items:[];
+     const count=document.getElementById('incidentRecoveryCount');if(count)count.textContent=String(items.length);
+     if(!items.length){const row=document.createElement('tr');const cell=document.createElement('td');cell.colSpan=7;cell.className='message';cell.textContent='No recovery actions have been recorded yet.';row.appendChild(cell);body.appendChild(row);}
+     else items.forEach(item=>{
+       const row=document.createElement('tr');
+       const result=item.result||{};
+       const values=[formatDate(item.created_at),item.container_id||'—',item.action||'—',item.status||'—',formatDate(item.approved_at),formatDate(item.completed_at),result.message||'—'];
+       values.forEach((value,index)=>{const cell=document.createElement('td');cell.textContent=String(value);if(index===3){cell.style.fontWeight='700';cell.style.color=String(value)==='verified'?'#6ee7b7':String(value)==='completed_degraded'?'#fde68a':String(value)==='failed'?'#fda4af':'inherit';}row.appendChild(cell);});
+       body.appendChild(row);
+     });
+     message.textContent='Showing '+items.length+' saved recovery action(s).';
+   }catch(error){message.textContent='Could not load recovery history: '+error.message;}
+ }
+
  let dockPilotSecurityAuditData = null;
 
  async function loadDockPilotSecurityAudit(){

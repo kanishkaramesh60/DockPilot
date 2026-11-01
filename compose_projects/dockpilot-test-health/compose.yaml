@@ -1,0 +1,11 @@
+services:
+  incident-test:
+    image: nginx:alpine
+    container_name: dockpilot-incident-test1
+    ports:
+      - "8092:80"
+    healthcheck:
+      test: ["CMD-SHELL", "exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
