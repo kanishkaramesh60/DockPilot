@@ -2,248 +2,224 @@
 
 # 🚢 DockPilot
 
-### Docker Container Management, Monitoring & Security Dashboard
+### Docker Management, Monitoring & Container Security Dashboard
 
-*One dashboard for container operations, resource monitoring, Compose management, autoscaling, health checks, and security auditing.*
+**Monitor → Detect → Investigate → Recommend → Approve → Recover → Verify → Record**
 
-<br>
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://dockpilot-8vlo.onrender.com)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![Tests](https://img.shields.io/badge/Tests-Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org/)
 
-![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-![pytest](https://img.shields.io/badge/pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)
-
-<br>
-
-[Features](#-features) •
-[Architecture](#%EF%B8%8F-system-architecture) •
-[Quick Start](#-quick-start) •
-[Testing](#-testing) •
-[Security](#-security-considerations) •
-[Roadmap](#-future-improvements)
+[**🌐 Live Demo**](https://dockpilot-8vlo.onrender.com) · [**📖 API Docs**](#-api-documentation) · [**🚀 Quick Start**](#-quick-start) · [**🗺️ Roadmap**](#️-roadmap)
 
 </div>
 
 ---
 
-## 📖 Table of Contents
+## 📌 Overview
 
-- [Overview](#-project-overview)
-- [Features](#-features)
-- [System Architecture](#%EF%B8%8F-system-architecture)
-- [Technology Stack](#-technology-stack)
-- [Project Structure](#-project-structure)
+**DockPilot** is a web-based platform that brings Docker container operations, resource monitoring, predictive failure detection, security auditing, and guided incident recovery into a single dashboard.
+
+Instead of juggling the CLI, separate monitoring tools, and manual security reviews, DockPilot gives you one place to **see what your containers are doing, catch problems early, harden your configurations, and recover safely with human approval**.
+
+> 🔐 **Security-first by design:** Compose files are validated before deployment, and recovery actions are never executed without explicit human approval.
+
+---
+
+## 📑 Table of Contents
+
+- [Key Features](#-key-features)
+- [Incident Workflow](#-incident-intelligence--guided-recovery)
+- [Tech Stack](#️-tech-stack)
+- [Architecture](#️-architecture)
 - [Quick Start](#-quick-start)
+- [API Documentation](#-api-documentation)
+- [Deployment](#-deployment-on-render)
 - [Testing](#-testing)
 - [Security Considerations](#-security-considerations)
-- [Use Cases](#-use-cases)
-- [Limitations](#-limitations)
-- [Future Improvements](#-future-improvements)
+- [Roadmap](#️-roadmap)
+- [Contributing](#-contributing)
+- [Author](#-author)
 
 ---
 
-## 📌 Project Overview
+## ✨ Key Features
 
-Managing Docker workloads often means juggling terminal commands and multiple tools to inspect containers, monitor resource usage, troubleshoot health issues, and review security configurations.
-
-**DockPilot** simplifies these workflows with a centralized web dashboard backed by live Docker Engine data. It is built with **Python, FastAPI, HTML, CSS, JavaScript**, and direct **Docker Engine** integration.
-
-The application includes operational safeguards, configuration validation, automated tests, and persistent security audit history.
-
----
-
-## ✨ Features
-
-<table>
-<tr>
-<td width="50%" valign="top">
-
-### 🐳 Container Management
-- View containers and their states
-- Inspect container details and logs
-- Perform supported container operations from the dashboard
-- Validate requests before executing actions
-
-</td>
-<td width="50%" valign="top">
-
-### 📦 Docker Resources
-- View images, networks, and volumes
-- Review Docker Compose projects
-- Access resources through the configured Docker Engine
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### 📊 Resource Monitoring
-- CPU usage visualization
-- Memory consumption monitoring
-- Network activity graphs
-- Per-container resource utilization
-
-</td>
-<td width="50%" valign="top">
-
-### ❤️ Health Monitoring
-- Track container health states
-- No duplicate alerts for repeated unhealthy checks
-- Recovery events when a container becomes healthy
-- Stale alert state cleared for deleted containers
-- Restart rate limiting to prevent excessive restarts
-- Docker command failures reported safely
-
-</td>
-</tr>
-</table>
-
-### 🔄 Autoscaling
-
-| Rule | Behavior |
-|---|---|
-| **Scale up** | After 1 minute of sustained high CPU |
-| **Scale down** | After 3 minutes of sustained low CPU |
-| **Replica limits** | Enforces minimum and maximum replicas |
-| **Cooldown** | Applied after every successful scaling action |
-| **Validation** | Configuration is validated; failed operations are reported |
-
-### 🛡️ Docker Compose Security Validation
-
-Compose configurations are inspected for risky settings. Depending on the rule, a configuration is either **blocked** or reported with a **warning**.
-
-- 🔓 Privileged containers
-- 🌐 Host network, PID, and IPC namespaces
-- ⚡ Excessive Linux capabilities
-- 🚫 Unconfined seccomp configurations
-- 🔌 Device mappings
-- 🧦 Docker socket mounts
-- 📁 Sensitive host filesystem mounts
-
-### 🔍 Container Security Auditing
-- Audit containers from the configured Docker Engine
-- See how many containers were scanned
-- Summaries grouped by severity
-- Detailed security audit reports
-- Highlights configurations that need further investigation
-
-### 🗃️ Security Audit History
-- Completed audit reports persisted in **SQLite**
-- Browse previously saved reports with timestamps and severity summaries
-- Severity trend visualization across saved audits
-- Report comparison *(when the comparison interface is enabled)*
-- Refresh saved history without running a new audit
-
----
-
-## 🏗️ System Architecture
-
-```text
-                  ┌─────────────────────────┐
-                  │          User           │
-                  └────────────┬────────────┘
-                               │
-                               ▼
-                  ┌─────────────────────────┐
-                  │    DockPilot Dashboard  │
-                  │      HTML / CSS / JS    │
-                  └────────────┬────────────┘
-                               │ HTTP Requests
-                               ▼
-                  ┌─────────────────────────┐
-                  │     FastAPI Backend     │
-                  │     Python / Uvicorn    │
-                  └────────────┬────────────┘
-                               │
-              ┌────────────────┼─────────────────┐
-              │                │                 │
-              ▼                ▼                 ▼
-      ┌──────────────┐ ┌──────────────┐ ┌────────────────┐
-      │ Container &  │ │ Monitoring & │ │ Security Audit │
-      │ Compose APIs │ │ Autoscaling  │ │ & Audit History│
-      └──────┬───────┘ └──────┬───────┘ └───────┬────────┘
-             │                │                 │
-             └────────────────┼─────────────────┘
-                              ▼
-                  ┌─────────────────────────┐
-                  │      Docker Engine      │
-                  │ Containers, Images,     │
-                  │ Networks and Volumes    │
-                  └─────────────────────────┘
-
-                  Security Audit History
-                              │
-                              ▼
-                  ┌─────────────────────────┐
-                  │     SQLite Database     │
-                  │    Saved Audit Reports  │
-                  └─────────────────────────┘
-```
+| | Feature | What it does |
+|---|---|---|
+| 🐳 | **Container Management** | View running and stopped containers; start, stop, restart, inspect, and read logs from one dashboard. |
+| 📊 | **Real-Time Monitoring** | Track CPU, memory, and network activity with live charts and stored historical metrics. |
+| 🔮 | **Predictive Failure Detection** | Analyze metrics to spot abnormal utilization patterns and flag likely failures before they happen. |
+| ❤️ | **Health Monitoring** | Detect unhealthy, restarting, and repeatedly crashing containers, with a record of health events. |
+| 🧾 | **Compose Management & Security** | Create and validate Docker Compose files, flagging risky settings before deployment. |
+| 📈 | **Intelligent Autoscaling** | CPU-based scale-up/scale-down with min/max replica limits and cooldown periods. |
+| 🛡️ | **Runtime Security Auditing** | Run security checks on containers and keep a searchable audit history. |
+| 🧪 | **Resilience Testing** | Run controlled failure experiments and observe how containers recover. |
+| 🚨 | **Incident Intelligence** | Detect, investigate, and recover from incidents with human-approved actions. |
 
 <details>
-<summary><b>📋 Component responsibilities</b></summary>
+<summary><b>🔍 Feature details (click to expand)</b></summary>
 
-<br>
+### 1. Docker Container Management
+- View running and stopped containers
+- Start, stop, and restart containers
+- Inspect container details
+- Access container logs
+- Manage everything through a centralized dashboard
 
-| Component | Responsibility |
-|---|---|
-| Frontend | Displays the dashboard and handles user interactions |
-| FastAPI | Provides API endpoints and validates incoming requests |
-| Docker integration | Retrieves Docker resource data and supports container operations |
-| Monitoring modules | Present resource metrics and container health information |
-| Autoscaling logic | Evaluates CPU thresholds, replica limits, and cooldown rules |
-| Security validator | Checks Compose configurations against implemented security rules |
-| Audit history | Stores and retrieves saved security audit reports |
-| SQLite | Provides persistent local storage for audit history |
+### 2. Real-Time Container Monitoring
+- CPU utilization
+- Memory consumption
+- Network activity
+- Graphical visualizations of resource usage
+- Historical monitoring metrics
+
+### 3. Predictive Container Failure Detection
+- Analyzes container monitoring metrics
+- Identifies potential container failures
+- Detects abnormal resource utilization patterns
+- Generates predictive insights for proactive maintenance
+
+### 4. Container Health Monitoring
+- Monitors container health status
+- Identifies unhealthy and restarting containers
+- Detects repeated container restarts
+- Maintains health events and status information
+
+### 5. Docker Compose Management & Security
+- Create and manage Compose configurations
+- Validate configurations before deployment
+- Detect potentially insecure configurations, including:
+  - ⚠️ Privileged container settings
+  - ⚠️ Host networking
+  - ⚠️ Unsafe security options
+  - ⚠️ Sensitive host-path mounts
+  - ⚠️ Docker socket mounts
+
+### 6. Intelligent Container Autoscaling
+- Monitors container resource utilization
+- Applies CPU-based scaling policies
+- Supports scale-up and scale-down decisions
+- Configurable minimum and maximum replica limits
+- Cooldown periods to prevent flapping
+- Maintains autoscaling status and event history
+
+### 7. Runtime Docker Security Auditing
+- Performs security checks on Docker containers
+- Identifies potential configuration risks
+- Maintains security audit history
+- Provides visibility into detected issues
+
+### 8. Container Resilience Testing
+- Controlled container resilience experiments
+- Observes container behavior during failure scenarios
+- Evaluates recovery behavior
+- Maintains experiment history
 
 </details>
 
 ---
 
-## 🧰 Technology Stack
+## 🚨 Incident Intelligence & Guided Recovery
 
-| Technology | Purpose |
-|---|---|
-| ![Python](https://img.shields.io/badge/-Python-3776AB?logo=python&logoColor=white) | Backend and application logic |
-| ![FastAPI](https://img.shields.io/badge/-FastAPI-009688?logo=fastapi&logoColor=white) | REST API and request handling |
-| ![Uvicorn](https://img.shields.io/badge/-Uvicorn-499848) | ASGI application server |
-| ![Docker](https://img.shields.io/badge/-Docker-2496ED?logo=docker&logoColor=white) | Container runtime and resource management (Engine + SDK where used) |
-| ![HTML5](https://img.shields.io/badge/-HTML5-E34F26?logo=html5&logoColor=white) ![CSS3](https://img.shields.io/badge/-CSS3-1572B6?logo=css3&logoColor=white) ![JS](https://img.shields.io/badge/-JavaScript-F7DF1E?logo=javascript&logoColor=black) | Dashboard structure, styling, and interactions |
-| ![SQLite](https://img.shields.io/badge/-SQLite-003B57?logo=sqlite&logoColor=white) | Persistent security audit history |
-| ![pytest](https://img.shields.io/badge/-pytest-0A9EDC?logo=pytest&logoColor=white) | Automated testing |
+DockPilot follows a structured, auditable incident workflow where **a human always approves the fix**:
+
+```mermaid
+flowchart LR
+    A[📡 Monitor] --> B[🔎 Detect]
+    B --> C[🧠 Investigate]
+    C --> D[💡 Recommend]
+    D --> E{👤 Human<br/>Approval}
+    E -- Approved --> F[🛠️ Recover]
+    E -- Rejected --> H[📝 Record]
+    F --> G[✅ Verify]
+    G --> H
+```
+
+- **Detect** unhealthy, stopped, and repeatedly restarting containers
+- **Investigate** detected incidents
+- **Recommend** recovery actions
+- **Require human approval** before running any supported recovery action
+- **Verify** container status after recovery
+- **Record** results and maintain a recovery history
 
 ---
 
-## 📂 Project Structure
+## 🛠️ Tech Stack
+
+| Category | Technologies |
+|---|---|
+| **Backend** | Python, FastAPI |
+| **Frontend** | HTML, CSS, JavaScript |
+| **Container Management** | Docker Engine, Docker SDK for Python |
+| **System Monitoring** | psutil |
+| **Config Validation** | PyYAML |
+| **Database** | SQLite |
+| **Visualization** | JavaScript Charts |
+| **Testing** | Pytest |
+| **Deployment** | Render |
+| **Version Control** | Git, GitHub |
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart TB
+    UI[🖥️ Dashboard<br/>HTML · CSS · JS]
+    API[⚡ FastAPI Backend<br/>manager/main.py]
+    DS[docker_service]
+    MC[metrics_collector]
+    FP[failure_predictor]
+    AS[autoscaling_service]
+    CS[compose_security]
+    IE[incident_engine /<br/>incident_recovery]
+    DB[(SQLite)]
+    DE[🐳 Docker Engine]
+
+    UI <--> API
+    API --> DS & MC & FP & AS & CS & IE
+    DS --> DE
+    MC --> DE
+    MC --> DB
+    FP --> DB
+    IE --> DB
+    AS --> DE
+```
+
+### Project Structure
 
 ```text
-dockpilot/
+DockPilot/
+├── dashboard/
+│   └── index.html                  # Web dashboard (frontend)
 │
-├── manager/                  # FastAPI backend
-│   ├── main.py
-│   ├── docker_service.py
-│   └── ...
+├── manager/                        # FastAPI backend
+│   ├── main.py                     # App entry point & API routes
+│   ├── docker_service.py           # Docker Engine operations
+│   ├── metrics_collector.py        # CPU / memory / network collection
+│   ├── metrics_history.py          # Historical metrics storage
+│   ├── autoscaling_service.py      # CPU-based autoscaling policies
+│   ├── compose_security.py         # Compose validation & risk detection
+│   ├── container_health.py         # Health & restart monitoring
+│   ├── failure_predictor.py        # Predictive failure detection
+│   ├── incident_engine.py          # Incident detection & investigation
+│   ├── incident_recovery.py        # Approved recovery & verification
+│   ├── resilience_lab.py           # Resilience experiments
+│   ├── security_audit_history.py   # Security audit records
+│   └── requirements.txt
 │
-├── dashboard/                # Frontend
-│   └── index.html
-│
-├── tests/                    # pytest suite
-│   ├── test_api.py
-│   ├── test_autoscaler.py
-│   ├── test_autoscaling_controller.py
-│   ├── test_compose_security.py
-│   ├── test_container_health.py
-│   ├── test_security.py
-│   ├── test_security_audit_history.py
-│   └── ...
-│
+├── compose_projects/               # Managed Compose projects
+├── prometheus/                     # Monitoring configuration
+├── tests/                          # Automated tests
+├── data/                           # Local SQLite data
+├── monitoring-compose.yaml
 ├── pytest.ini
 └── README.md
 ```
-
-> **Note:** This is a representative structure. The SQLite audit history database is created at runtime, depending on the configured database path.
 
 ---
 
@@ -251,134 +227,156 @@ dockpilot/
 
 ### Prerequisites
 
-- 🖥️ Windows 10/11 or another supported OS
-- 🐍 Python 3.13 (or a compatible project-supported version)
-- 🐳 Docker Desktop or an accessible Docker Engine
-- 🔧 Git
-- ⌨️ A terminal such as Windows Command Prompt
+- **Python 3.10+**
+- **Docker Desktop** or **Docker Engine** (running)
+- **Git**
+- Windows, Linux, or macOS
 
-### 1️⃣ Clone the repository
+### Installation
+
+**1. Clone the repository**
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/dockpilot.git
-cd dockpilot
+git clone https://github.com/kanishkaramesh60/DockPilot.git
+cd DockPilot
 ```
 
-### 2️⃣ Create and activate a virtual environment
+**2. Create and activate a virtual environment**
 
-```cmd
-python -m venv .venv
-.venv\Scripts\activate
+```bash
+python -m venv venv
 ```
 
-### 3️⃣ Install dependencies
-
-Install the packages listed in the project's dependency file (for example `requirements.txt`).
-
-### 4️⃣ Start Docker Desktop and verify access
-
-```cmd
-docker version
-docker ps -a
-```
-
-### 5️⃣ Start the DockPilot backend
-
-From the project root:
-
-```cmd
-cd manager
-..\.venv\Scripts\python.exe -m uvicorn main:app --reload --host 127.0.0.1 --port 8001
-```
-
-### 6️⃣ Open DockPilot
-
-| Page | URL |
+| OS | Activation command |
 |---|---|
-| 🎛️ Dashboard | http://127.0.0.1:8001/ |
-| 📚 API docs | http://127.0.0.1:8001/docs |
-| 💚 Health endpoint | http://127.0.0.1:8001/health |
+| Windows (CMD) | `venv\Scripts\activate` |
+| Linux / macOS | `source venv/bin/activate` |
 
-> Keep the backend terminal running while you use the dashboard.
+**3. Install dependencies**
+
+```bash
+pip install -r manager/requirements.txt
+```
+
+**4. Make sure Docker is running**
+
+Docker Desktop or Docker Engine must be running and accessible to the application.
+
+**5. Start the backend**
+
+```bash
+cd manager
+python -m uvicorn main:app --reload --host 127.0.0.1 --port 8001
+```
+
+**6. Open DockPilot**
+
+| | URL |
+|---|---|
+| 🖥️ Dashboard | http://127.0.0.1:8001 |
+| 📖 API Docs (Swagger) | http://127.0.0.1:8001/docs |
+
+---
+
+## 📖 API Documentation
+
+DockPilot is built on FastAPI, so interactive API documentation is generated automatically.
+
+Once the server is running, visit:
+
+- **Swagger UI:** `http://127.0.0.1:8001/docs`
+
+---
+
+## ☁️ Deployment on Render
+
+The FastAPI web application is deployed on **Render**.
+
+| Setting | Value |
+|---|---|
+| Service Type | Web Service |
+| Runtime | Python 3 |
+| Branch | `main` |
+| Root Directory | *(blank)* |
+| Build Command | `pip install -r manager/requirements.txt` |
+| Start Command | `cd manager && uvicorn main:app --host 0.0.0.0 --port $PORT` |
+
+**🔗 Live application:** https://dockpilot-8vlo.onrender.com
+
+> [!NOTE]
+> The hosted dashboard and backend run separately from any Docker Engine on your local machine. Remote container management requires a separately configured, **secure** Docker Engine connection. Local SQLite data also needs persistent storage to survive ephemeral hosting restarts.
 
 ---
 
 ## 🧪 Testing
 
-DockPilot uses **pytest** to validate API behavior, security rules, autoscaling logic, container health handling, and audit history.
+DockPilot includes automated tests for its key components. From the project root:
 
-```cmd
-.venv\Scripts\python.exe -m pytest -v
+```bash
+python -m pytest -v
 ```
-
-<details>
-<summary><b>What the tests cover</b></summary>
-
-<br>
-
-- API health and dashboard routes
-- Invalid container actions and ports
-- Docker resource listing
-- Compose project validation
-- Autoscaling thresholds and replica limits
-- Autoscaling cooldown behavior
-- Compose security checks
-- Container health alerts and restart rate limiting
-- Confirmation requirements for selected operations
-- Security audit-history retrieval and persistence
-
-</details>
-
-> Passing tests validate the covered code paths. Manual verification against the configured Docker Engine is still recommended.
 
 ---
 
 ## 🔐 Security Considerations
 
-DockPilot includes input validation and safety checks for selected Docker operations:
-
-- ✔️ Validates container operation requests
-- ✔️ Rejects invalid ports and Compose project names
-- ✔️ Requires confirmation for selected Compose operations
-- ✔️ Detects or blocks risky Compose configurations per implemented rules
-- ✔️ Enforces autoscaling limits and cooldowns
-- ✔️ Limits repeated health-monitor restart actions
-- ✔️ Stores completed audit reports for later review
-
 > [!WARNING]
-> Run DockPilot only in Docker environments you are authorized to manage. Do not expose the dashboard to untrusted networks without proper authentication, authorization, and deployment security. Review every operation before confirming it, especially when it affects important containers or host resources.
+> Exposing the Docker API without authentication gives an attacker full control of the host. Never expose it publicly.
+
+- ✅ Validate Docker Compose configurations before deployment
+- ✅ Avoid privileged containers unless explicitly required
+- ✅ Restrict host networking and sensitive volume mounts
+- ✅ Protect Docker Engine access with authenticated, encrypted connections
+- ❌ Do not expose an unauthenticated Docker API publicly
+- ❌ Keep credentials and environment variables out of source control
 
 ---
 
-## 🎯 Use Cases
+## 🗺️ Roadmap
 
-- 🏠 Local Docker container management
-- 🛠️ Development environment monitoring
-- 📦 Docker Compose project inspection
-- 📈 Container resource usage visualization
-- 🩺 Container health troubleshooting
-- 🔒 Docker configuration security review
-- 🕰️ Historical security audit review
-- 🎓 Demonstrating Docker automation and backend API development
-
----
-
-## 🚧 Limitations
-
-- Targets the configured Docker Engine, primarily for local development and management
-- Security findings depend on the implemented rules and need contextual review
-- Resource graphs are not a substitute for a full long-term observability platform
-- Automated tests do not replace end-to-end testing against a real Docker environment
-- Not a Kubernetes replacement or a cloud fleet-management system
+- [ ] Secure remote Docker Engine integration
+- [ ] Multi-host Docker environment management
+- [ ] Role-based access control (RBAC)
+- [ ] Advanced anomaly detection
+- [ ] Enhanced container security analytics
+- [ ] Persistent cloud-based monitoring history
+- [ ] Advanced incident investigation and automated verification
 
 ---
 
-## 🔮 Future Improvements
+## 🎯 Project Objective
 
-Possible extensions (not yet claimed as implemented):
+DockPilot aims to provide a centralized platform that combines container management, resource monitoring, predictive failure detection, security auditing, autoscaling, and guided incident recovery.
 
-- [ ] Authentication and role-based access control
-- [ ] More extensive browser-level integration tests
-- [ ] Packaging for easier installation
-- [ ] Improved operational logging and diagnostics
-- [ ] Additional security reporting and documentation
+By pairing operational visibility with security-focused capabilities and human-approved recovery workflows, it makes container management **more efficient, more reliable, and more secure**.
+
+---
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome!
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m "Add your feature"`
+4. Push to the branch: `git push origin feature/your-feature`
+5. Open a Pull Request
+
+Please make sure the test suite passes (`python -m pytest -v`) before submitting.
+
+---
+
+## 👤 Author
+
+**Kanishka Ramesh**
+GitHub: [@kanishkaramesh60](https://github.com/kanishkaramesh60)
+
+*Developed as a Cybersecurity and Cloud-Native Container Management project.*
+
+---
+
+<div align="center">
+
+⭐ **If you find DockPilot useful, please consider starring the repository!** ⭐
+
+</div>
