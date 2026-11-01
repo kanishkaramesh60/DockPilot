@@ -1,43 +1,41 @@
-# Credentials and environment files
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local databases and runtime data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Backups
+*_backup.py
+*_backup/
+backup_*/
+
+# Runtime history and logs
+*.log
+logs/
+resilience_history.json
+
+# Secrets
 .env
 .env.*
 !.env.example
 *.pem
 *.key
+*.p12
+*.pfx
 secrets/
 credentials/
-
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-env/
-
-# Tests and coverage
-.pytest_cache/
-.coverage
-htmlcov/
 
 # IDE files
 .vscode/
 .idea/
-*.swp
-
-# Logs
-*.log
-logs/
-
-# Local databases
-data/*.db
-data/*.sqlite
-data/*.sqlite3
-data/*.db-journal
-
-# Generated reports
-reports/*
-
-# OS files
-.DS_Store
-Thumbs.db
-desktop.ini
