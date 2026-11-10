@@ -390,7 +390,7 @@ check-monitoring.bat
 Run the FastAPI application from the project root:
 
 ```cmd
-uvicorn manager.main:app --host 127.0.0.1 --port 8000
+uvicorn manager.main:app --host 127.0.0.1 --port 8001
 ```
 
 ### Step 6: Access the Interfaces
@@ -447,6 +447,13 @@ uvicorn manager.main:app --host 127.0.0.1 --port 8000
 ```promql
 up
 ```
+
+**Docker Container Health Status (DockPilot Exporter)**
+
+```promql
+dockpilot_container_health_status == 0
+```
+
 
 ---
 
