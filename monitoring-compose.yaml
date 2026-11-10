@@ -94,9 +94,35 @@ services:
     networks:
       - dockpilot-monitoring
 
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: dockpilot-alertmanager
+    ports:
+      - "9093:9093"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - dockpilot_alertmanager_data:/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--cluster.listen-address="
+      - "--web.external-url=http://localhost:9093"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9093/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - dockpilot-monitoring
+
 volumes:
   dockpilot_prometheus_data:
   dockpilot_grafana_data:
+  dockpilot_alertmanager_data:
 
 networks:
   dockpilot-monitoring:

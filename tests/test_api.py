@@ -76,6 +76,193 @@ def test_prometheus_scrape_and_alert_rule_alignment():
     assert "$labels.container_id" in unhealthy_rule["annotations"]["description"]
 
 
+def test_alertmanager_compose_and_prometheus_integration():
+    import yaml
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+
+    # 1. Verify monitoring-compose.yaml Alertmanager service
+    compose_path = root / "monitoring-compose.yaml"
+    assert compose_path.exists()
+    compose_cfg = yaml.safe_load(compose_path.read_text(encoding="utf-8"))
+
+    services = compose_cfg.get("services", {})
+    assert "alertmanager" in services
+    am_svc = services["alertmanager"]
+    assert am_svc.get("image") == "prom/alertmanager:latest"
+    assert "9093:9093" in am_svc.get("ports", [])
+    assert "dockpilot-monitoring" in am_svc.get("networks", [])
+    assert any("dockpilot_alertmanager_data:" in str(v) for v in am_svc.get("volumes", []))
+    assert any("alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro" in str(v) for v in am_svc.get("volumes", []))
+    assert "dockpilot_alertmanager_data" in compose_cfg.get("volumes", {})
+
+    # 2. Verify prometheus.yml alerting endpoint
+    prom_cfg_path = root / "prometheus" / "prometheus.yml"
+    prom_cfg = yaml.safe_load(prom_cfg_path.read_text(encoding="utf-8"))
+
+    alerting_cfg = prom_cfg.get("alerting", {})
+    alertmanagers = alerting_cfg.get("alertmanagers", [])
+    assert len(alertmanagers) >= 1
+    am_targets = alertmanagers[0].get("static_configs", [])[0].get("targets", [])
+    assert "alertmanager:9093" in am_targets
+
+    # 3. Verify all scrape jobs are preserved
+    jobs = {job["job_name"] for job in prom_cfg.get("scrape_configs", [])}
+    for expected in ["prometheus", "cadvisor", "node-exporter", "grafana", "dockpilot", "alertmanager"]:
+        assert expected in jobs
+
+
+def test_alertmanager_config_routing_and_receivers():
+    import yaml
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    am_cfg_path = root / "alertmanager" / "alertmanager.yml"
+    assert am_cfg_path.exists()
+    am_cfg = yaml.safe_load(am_cfg_path.read_text(encoding="utf-8"))
+
+    # Global
+    assert "global" in am_cfg
+    assert "smtp_smarthost" in am_cfg["global"]
+    assert "smtp_from" in am_cfg["global"]
+
+    # Route
+    route = am_cfg.get("route", {})
+    assert route.get("receiver") == "dockpilot-default-receiver"
+    assert "alertname" in route.get("group_by", [])
+    assert "severity" in route.get("group_by", [])
+
+    # Sub-routes
+    sub_routes = route.get("routes", [])
+    route_map = {}
+    for r in sub_routes:
+        match = r.get("match", {})
+        if "severity" in match:
+            route_map[match["severity"]] = r.get("receiver")
+
+    assert route_map.get("critical") == "dockpilot-critical-receiver"
+    assert route_map.get("warning") == "dockpilot-warning-receiver"
+
+    # Inhibition rules
+    inhibit_rules = am_cfg.get("inhibit_rules", [])
+    assert len(inhibit_rules) >= 1
+    # Critical inhibits warning, NEVER warning inhibits critical
+    for rule in inhibit_rules:
+        assert rule.get("source_match", {}).get("severity") == "critical"
+        assert rule.get("target_match", {}).get("severity") == "warning"
+
+    # Receivers
+    receivers = {rec["name"]: rec for rec in am_cfg.get("receivers", [])}
+    assert "dockpilot-default-receiver" in receivers
+    assert "dockpilot-critical-receiver" in receivers
+    assert "dockpilot-warning-receiver" in receivers
+
+    for name, rec in receivers.items():
+        email_configs = rec.get("email_configs", [])
+        assert len(email_configs) >= 1
+        assert email_configs[0].get("send_resolved") is True
+
+
+def test_env_example_and_gitignore():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+
+    # .env.example
+    env_example = root / ".env.example"
+    assert env_example.exists()
+    content = env_example.read_text(encoding="utf-8")
+    for key in [
+        "SMTP_SMARTHOST",
+        "SMTP_PORT",
+        "SMTP_AUTH_USERNAME",
+        "SMTP_AUTH_PASSWORD",
+        "SMTP_FROM",
+        "ALERT_RECEIVER_EMAIL",
+        "ALERT_RECEIVER_CRITICAL_EMAIL",
+        "ALERT_RECEIVER_WARNING_EMAIL",
+        "SMTP_REQUIRE_TLS"
+    ]:
+        assert f"{key}=" in content
+
+    # .gitignore
+    gitignore = root / ".gitignore"
+    assert gitignore.exists()
+    gi_content = gitignore.read_text(encoding="utf-8")
+    assert ".env" in gi_content
+
+
+def test_feature5_automated_setup_scripts():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+
+    # 1. install.bat
+    install_bat = root / "install.bat"
+    assert install_bat.exists(), "install.bat must exist"
+    install_text = install_bat.read_text(encoding="utf-8")
+    assert "git --version" in install_text or "where git" in install_text
+    assert "python" in install_text
+    assert "docker compose" in install_text
+    assert "monitoring-compose.yaml" in install_text
+    assert "venv" in install_text
+    assert "8001" in install_text
+    assert "check-monitoring.bat" in install_text
+    # Ensure .env is preserved and not blindly overwritten
+    assert ".env" in install_text
+    assert ".env.example" in install_text
+
+    # 2. start.bat
+    start_bat = root / "start.bat"
+    assert start_bat.exists(), "start.bat must exist"
+    start_text = start_bat.read_text(encoding="utf-8")
+    assert "docker compose" in start_text
+    assert "monitoring-compose.yaml" in start_text
+    assert "8001" in start_text
+
+    # 3. stop.bat
+    stop_bat = root / "stop.bat"
+    assert stop_bat.exists(), "stop.bat must exist"
+    stop_text = stop_bat.read_text(encoding="utf-8")
+    assert "docker compose" in stop_text
+    assert "stop" in stop_text
+    assert "8001" in stop_text
+
+    # 4. check-monitoring.bat
+    check_bat = root / "check-monitoring.bat"
+    assert check_bat.exists(), "check-monitoring.bat must exist"
+    check_text = check_bat.read_text(encoding="utf-8")
+    assert "dockpilot-prometheus" in check_bat.read_text(encoding="utf-8")
+    assert "dockpilot-grafana" in check_text
+    assert "dockpilot-alertmanager" in check_text
+
+
+def test_feature5_safety_rules_and_preservation():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+
+    scripts = [
+        root / "install.bat",
+        root / "start.bat",
+        root / "stop.bat",
+        root / "check-monitoring.bat",
+    ]
+
+    prohibited_patterns = [
+        "docker compose down -v",
+        "down -v",
+        "volume prune",
+        "system prune",
+        "docker volume rm",
+    ]
+
+    for script in scripts:
+        assert script.exists()
+        content = script.read_text(encoding="utf-8").lower()
+        for pattern in prohibited_patterns:
+            assert pattern not in content, f"Destructive command '{pattern}' found in {script.name}"
 
 
 # 2. Dashboard route

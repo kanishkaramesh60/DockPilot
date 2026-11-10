@@ -303,157 +303,331 @@ The VM-based option uses VirtualBox and Vagrant to provide a consistent all-in-o
 DockPilot/
 │
 ├── manager/
-│   ├── main.py
-│   ├── docker_service.py
-│   ├── metrics_collector.py
-│   ├── metrics_history.py
-│   ├── failure_predictor.py
-│   ├── incident_engine.py
-│   └── compose_security.py
+│   ├── main.py                     # FastAPI backend & metrics exporter (:8001)
+│   ├── docker_service.py           # Docker Engine SDK integration
+│   ├── metrics_collector.py        # Real-time container metrics worker
+│   ├── metrics_history.py          # SQLite metrics history persistence
+│   ├── failure_predictor.py        # Predictive failure heuristics
+│   ├── incident_engine.py          # Incident detection & classification
+│   └── compose_security.py         # Compose security auditor
 │
 ├── data/
-│   └── dockpilot_history.db
+│   └── dockpilot_history.db        # SQLite metrics & incident database
 │
 ├── prometheus/
-│   ├── prometheus.yml
-│   └── alert_rules.yml
+│   ├── prometheus.yml              # Prometheus scrape jobs & Alertmanager endpoint
+│   └── alert_rules.yml             # 11 production alert rules (infrastructure & containers)
+│
+├── alertmanager/
+│   └── alertmanager.yml            # Alert routing, grouping, inhibition & email templates
 │
 ├── grafana/
+│   ├── provisioning/
+│   │   ├── datasources/prometheus.yml   # Auto-provisioned Prometheus datasource
+│   │   └── dashboards/dashboard.yml     # Auto-provisioned dashboard provider
 │   └── dashboards/
-│       └── dockpilot-monitoring.json
+│       └── dockpilot-monitoring.json    # Complete 39-panel observability dashboard
 │
-├── monitoring-compose.yaml
-├── check-monitoring.bat
-├── README.md
+├── scripts/
+│   └── apply_alertmanager_env.py   # Secure .env-to-alertmanager.yml sync & hot-reload
+│
+├── .env.example                    # Environment secrets template
+├── monitoring-compose.yaml         # Orchestration for Prometheus, Grafana, Alertmanager, cAdvisor, Node Exporter
+├── install.bat                     # Feature 5: Automated prerequisites, venv, compose & health setup
+├── start.bat                       # Feature 5: Fast startup for backend & monitoring stack
+├── stop.bat                        # Feature 5: Safe shutdown script preserving all volumes
+├── check-monitoring.bat            # 30-point monitoring infrastructure health check (12 categories)
+├── pytest.ini                      # Pytest configuration
+├── README.md                       # Comprehensive system documentation
 └── tests/
-    └── test_api.py
+    ├── test_api.py                 # Core API, scrape targets, Alertmanager & Feature 5 tests
+    ├── test_compose_security.py    # Security audit tests
+    ├── test_container_health.py    # Container health & metrics exporter tests
+    ├── test_resilience_lab.py      # Chaos testing suite
+    ├── test_security.py            # Container vulnerability tests
+    └── test_security_audit_history.py # Audit history database tests
 ```
-
-Additional installation scripts, Alertmanager configuration, VM configuration, and notification templates form part of the environment setup and distribution structure.
 
 ---
 
-## 7. Installation and Setup
+## 7. Automated Installation and Setup (Feature 5)
 
-### Prerequisites
+DockPilot is engineered to be fully installable, configurable, and runnable on a fresh Windows machine with a single command (`install.bat`), while strictly safeguarding existing persistent volumes, metrics databases, and environment secrets.
 
-- Windows, Linux, or a supported VM environment.
-- Docker Desktop or Docker Engine.
-- Docker Compose.
-- Python 3.10 or later.
-- Git.
-- A web browser.
+### 7.1 Automated One-Click Installation (`install.bat`)
 
-For VM-based installation:
-
-- Oracle VirtualBox.
-- Vagrant.
-
-### Step 1: Clone the Repository
+To install DockPilot on a fresh Windows machine, clone the repository and run `install.bat` from a Windows Command Prompt (CMD) with administrative privileges:
 
 ```cmd
 git clone https://github.com/kanishkaramesh60/DockPilot.git
 cd DockPilot
+install.bat
 ```
 
-### Step 2: Create a Python Virtual Environment
+`install.bat` automatically executes a 7-stage end-to-end installation and verification pipeline:
 
-```cmd
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
+```text
+==============================================================================
+                     DockPilot - Installation and Setup
+==============================================================================
+[1/7] Verifying system prerequisites...
+      - Git (PATH check and version verification)
+      - Python 3.10+ (verifies runtime >= 3.10)
+      - Docker CLI & Docker Compose v2 (validates docker compose)
+      - Docker Engine Daemon (verifies daemon connectivity)
+[2/7] Checking required project files and directories...
+      - Verifies core files: monitoring-compose.yaml, manager\main.py,
+        prometheus.yml, alert_rules.yml, alertmanager.yml, dashboard json
+      - Automatically creates data\, reports\, and logs\ runtime directories
+[3/7] Setting up Python virtual environment and dependencies...
+      - Creates isolated .\venv environment if missing
+      - Upgrades pip and installs manager\requirements.txt, pytest, and httpx
+[4/7] Checking environment configuration...
+      - If .env is missing, initializes it safely from .env.example
+      - If .env already exists, strictly preserves existing secrets and SMTP settings
+[5/7] Validating and starting Docker monitoring services...
+      - Validates syntax using docker compose -f monitoring-compose.yaml config
+      - Starts Prometheus, Grafana, Alertmanager, cAdvisor, Node Exporter via up -d
+[6/7] Starting DockPilot FastAPI backend service (port 8001)...
+      - Detects if backend is already running on port 8001
+      - Launches backend in background using uvicorn with --app-dir manager
+      - Actively polls port 8001 until the socket is listening
+[7/7] Verifying service readiness and Prometheus targets...
+      - Automatically invokes check-monitoring.bat
+      - Validates all 30 checks across 12 monitoring categories
+==============================================================================
 ```
 
-### Step 3: Start the Monitoring Stack
+### 7.2 Service Lifecycle Commands (Day-to-Day Operations)
 
-Check the Docker Compose configuration:
+DockPilot provides dedicated Windows batch scripts for routine operational management:
 
+| Command | Script File | Purpose & Behavior |
+|---|---|---|
+| **Full Install** | `install.bat` | End-to-end prerequisites validation, venv setup, dependencies install, container spin-up, backend launch, and 30-point health check. |
+| **Start Stack** | `start.bat` | Fast daily startup. Verifies Docker daemon, starts monitoring containers via `docker compose up -d`, starts FastAPI backend on port 8001 if not already running, and outputs interface URLs. |
+| **Stop Stack** | `stop.bat` | Gracefully terminates FastAPI backend process on port 8001 and halts containers using `docker compose stop`. **Never deletes volumes or data.** |
+| **Health Check** | `check-monitoring.bat` | Runs 30 automated integration checks across 12 categories covering containers, endpoints, metrics, Grafana panels, alert rules, and Alertmanager routing. |
+
+#### Starting All Services
 ```cmd
-docker compose -f monitoring-compose.yaml config
+start.bat
 ```
 
-Start monitoring services:
-
+#### Stopping All Services Safely
 ```cmd
-docker compose -f monitoring-compose.yaml up -d
+stop.bat
 ```
 
-### Step 4: Verify Monitoring Containers
-
+#### Verifying Infrastructure Health
 ```cmd
-docker ps
 check-monitoring.bat
 ```
 
-### Step 5: Start the DockPilot Backend
+### 7.3 Fresh Machine vs. Repeated Run Behavior (Idempotency)
 
-Run the FastAPI application from the project root:
+DockPilot's automation scripts are fully **idempotent** and safe to execute repeatedly:
 
-```cmd
-uvicorn manager.main:app --host 127.0.0.1 --port 8001
-```
+- **Virtual Environment**: If `.\venv` exists, `install.bat` reuses the existing environment and updates packages, avoiding slow re-creation.
+- **Environment Secrets (`.env`)**: If `.env` already exists, `install.bat` will **never** overwrite it. User-configured SMTP credentials and secrets remain untouched.
+- **Port 8001 Backend Detection**: If the FastAPI backend is already listening on port 8001, both `install.bat` and `start.bat` recognize the running process (by PID) and avoid launching duplicate instances.
+- **Container Idempotency**: Docker Compose ensures only stopped or missing containers are started. Running containers are left undisturbed.
 
-### Step 6: Access the Interfaces
+### 7.4 Manual Configuration & Setup Notes
 
-| Service | Local URL |
-|---|---|
-| DockPilot | http://localhost:8001 |
-| Prometheus | http://localhost:9090 |
-| Grafana | http://localhost:3000 |
-| cAdvisor | http://localhost:8085 |
+While `install.bat` automates software installation and orchestration, two items require user configuration:
 
-> Grafana credentials depend on the configured environment. Change default credentials before use and keep passwords out of GitHub.
+#### 1. Docker Desktop on Windows
+- Docker Desktop must be installed and running before executing `install.bat` or `start.bat`.
+- Ensure Docker Desktop is set to **Linux containers** mode.
+- If Docker Desktop is stopped, `install.bat` will detect this in Step 1 and provide clear instructions to start the daemon before re-running.
+
+#### 2. SMTP Credentials for Email Alerting (Optional)
+To enable real email delivery from Alertmanager:
+1. Open the `.env` file in the project root.
+2. Fill in your SMTP server credentials:
+   ```env
+   SMTP_SMARTHOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_AUTH_USERNAME=your-email@gmail.com
+   SMTP_AUTH_PASSWORD=your-app-password
+   SMTP_FROM=dockpilot-alerts@yourdomain.com
+   ALERT_RECEIVER_EMAIL=devops-admin@yourdomain.com
+   ALERT_RECEIVER_CRITICAL_EMAIL=devops-critical@yourdomain.com
+   ALERT_RECEIVER_WARNING_EMAIL=devops-warning@yourdomain.com
+   SMTP_REQUIRE_TLS=true
+   ```
+3. Synchronize the environment variables into `alertmanager/alertmanager.yml` and hot-reload Alertmanager:
+   ```cmd
+   venv\Scripts\python.exe scripts\apply_alertmanager_env.py
+   ```
+
+### 7.5 Safety & Data Preservation Guarantees
+
+DockPilot follows strict DevOps safety practices to protect production telemetry and monitoring history:
+
+> [!CAUTION]
+> **Data Preservation Policy:**
+> - DockPilot scripts **NEVER** use `docker compose down -v`.
+> - DockPilot scripts **NEVER** run `docker volume prune` or `docker system prune`.
+> - All named Docker volumes (`dockpilot_prometheus_data`, `dockpilot_grafana_data`, `dockpilot_alertmanager_data`) are permanent and retained across all restarts and stops.
+> - The application SQLite history database (`data\dockpilot_history.db`) is preserved across shutdowns.
+
+### 7.6 Service Access & Default Credentials
+
+Once started, all services are accessible via localhost:
+
+| Service | Local URL | Default Credentials | Description |
+|---|---|---|---|
+| **DockPilot Dashboard** | http://localhost:8001 | None (direct access) | Container management, metrics graphs, incident & security dashboard |
+| **DockPilot REST API Docs** | http://localhost:8001/docs | None | Swagger UI for all REST endpoints & metrics engine |
+| **Grafana Dashboard** | http://localhost:3000 | `admin` / `admin` | Centralized 39-panel observability dashboard |
+| **Prometheus Web UI** | http://localhost:9090 | None | TSDB metrics engine, targets status & 11 alert rules |
+| **Alertmanager Web UI** | http://localhost:9093 | None | Alert routing, grouping, silencing & active notifications |
+| **cAdvisor Telemetry** | http://localhost:8085 | None | Real-time container resource telemetry & cgroup statistics |
+
+### 7.7 Troubleshooting Guide
+
+| Issue / Symptom | Possible Cause | Solution |
+|---|---|---|
+| `[FAIL] Docker daemon is not running` | Docker Desktop is not started or initializing. | Open Docker Desktop, wait for the status indicator to show green ("Engine running"), then re-run `install.bat`. |
+| Port `8001` already in use | Another application or an orphaned uvicorn process is occupying port 8001. | Run `stop.bat` to terminate any orphaned process on port 8001, or run `netstat -ano \| findstr :8001` to identify the conflicting process. |
+| Grafana reports `Datasource not found` | Prometheus container started after Grafana. | Run `docker compose -f monitoring-compose.yaml restart grafana` or run `check-monitoring.bat` to re-verify provisioning. |
+| Alertmanager email delivery fails | SMTP host, port, or app password incorrect in `.env`. | Verify `.env` credentials, ensure an App Password (not standard account password) is used for Gmail/Outlook, and run `venv\Scripts\python.exe scripts\apply_alertmanager_env.py`. |
+| Scrape target `dockpilot` shows DOWN in Prometheus | Backend process not running or firewall blocking `host.docker.internal`. | Ensure backend is active via `start.bat`. Confirm `http://localhost:8001/metrics` responds in your browser. |
 
 ---
 
-## 8. Alert Configuration
+## 8. Prometheus Alert Rules & Alertmanager Integration
 
-| Component | Configuration File |
-|---|---|
-| Prometheus alert rules | `prometheus/alert_rules.yml` |
-| Prometheus configuration | `prometheus/prometheus.yml` |
-| Alertmanager configuration | `alertmanager/alertmanager.yml` |
+DockPilot integrates **Prometheus Alertmanager** into the monitoring stack to collect, group, deduplicate, route, and deliver rich HTML email notifications for alerts evaluated by Prometheus.
 
-### Example PromQL Expressions
+```mermaid
+flowchart TD
+    subgraph Targets["Scrape Targets (5 + Alertmanager)"]
+        CA["cAdvisor (:8085)"]
+        NE["Node Exporter (:9100)"]
+        DP["DockPilot Exporter (:8001)"]
+        PR["Prometheus (:9090)"]
+        GF["Grafana (:3000)"]
+        AM["Alertmanager (:9093)"]
+    end
 
-**CPU Usage**
+    subgraph PrometheusEngine["Prometheus Engine (:9090)"]
+        RULES["alert_rules.yml<br/>11 Production Rules"]
+        TSDB[("Prometheus TSDB")]
+        EVAL{"Rule Evaluator<br/>(Every 10s)"}
+    end
 
-```promql
-100 - (avg by (instance) (
-  rate(node_cpu_seconds_total{mode="idle"}[1m])
-) * 100)
+    subgraph AlertmanagerService["Alertmanager Service (:9093)"]
+        ROUTER{"Severity Router<br/>(alertmanager.yml)"}
+        INHIBIT["Inhibition Rules<br/>(Critical inhibits Warning)"]
+        DEDUP["Deduplication &amp; Grouping<br/>(alertname + severity)"]
+        REC_CRIT["Critical Receiver<br/>devops-critical@..."]
+        REC_WARN["Warning Receiver<br/>devops-warning@..."]
+        REC_DEF["Default Receiver<br/>admin@..."]
+    end
+
+    subgraph Notifications["Notification Delivery"]
+        EMAIL_CRIT["📧 Critical Alert Email<br/>(Immediate Dispatch, group_wait: 10s)"]
+        EMAIL_WARN["📧 Warning Alert Email<br/>(group_wait: 10s)"]
+        EMAIL_RESOLV["✅ Resolution Email<br/>(send_resolved: true)"]
+    end
+
+    Targets -->|Pull Metrics (10s)| PrometheusEngine
+    PrometheusEngine --> RULES
+    RULES --> EVAL
+    EVAL -->|Push Firing / Resolved Alerts| AlertmanagerService
+    ROUTER --> INHIBIT
+    INHIBIT --> DEDUP
+    DEDUP -->|severity: critical| REC_CRIT --> EMAIL_CRIT
+    DEDUP -->|severity: warning| REC_WARN --> EMAIL_WARN
+    DEDUP -->|status: resolved| EMAIL_RESOLV
+    DEDUP -->|unmatched| REC_DEF
 ```
 
-**Memory Usage**
+### Component Configuration Files
 
+| Component | Configuration File | Purpose |
+|---|---|---|
+| **Prometheus alert rules** | `prometheus/alert_rules.yml` | 11 declarative alert rules across Infra, Containers, and Monitoring |
+| **Prometheus configuration** | `prometheus/prometheus.yml` | Configures scrape targets and `alerting.alertmanagers` pointing to `alertmanager:9093` |
+| **Alertmanager configuration** | `alertmanager/alertmanager.yml` | Severity routing, receivers, group intervals, HTML templates, and inhibition rules |
+| **Environment Template** | `.env.example` | Template for SMTP credentials and receiver email addresses |
+| **Environment Sync Script** | `scripts/apply_alertmanager_env.py` | Synchronizes `.env` credentials to `alertmanager.yml` and hot-reloads via `/-/reload` |
+
+### Alert Severity Routing Matrix
+
+Alertmanager matches labels evaluated by Prometheus and routes notifications to the appropriate receiver:
+
+| Severity | Receiver Name | Destination Email | Repeat Interval | Behavior |
+|---|---|---|---|---|
+| `critical` | `dockpilot-critical-receiver` | `devops-critical@dockpilot.local` | 2h | High-priority immediate alert; sends firing and resolved notifications |
+| `warning` | `dockpilot-warning-receiver` | `devops-warning@dockpilot.local` | 2h | Warning-level alerts; inhibited if a critical alert is firing on the same instance |
+| *fallback* | `dockpilot-default-receiver` | `admin@dockpilot.local` | 2h | Default fallback for unclassified or info-level alerts |
+
+### Inhibition Rules
+
+To avoid notification floods during major infrastructure failures, Alertmanager enforces inhibition:
+- **Rule:** A `critical` alert suppresses any `warning` alert with the matching `alertname` and `instance`.
+- **Guarantee:** Critical alerts are **never** suppressed by warning alerts.
+
+### Configuring SMTP Email Notifications
+
+DockPilot keeps credentials strictly outside source control. Configure your email provider using `.env`:
+
+1. Copy `.env.example` to `.env`:
+   ```cmd
+   copy .env.example .env
+   ```
+
+2. Edit `.env` with your SMTP provider details:
+   ```env
+   SMTP_SMARTHOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_AUTH_USERNAME=your-email@gmail.com
+   SMTP_AUTH_PASSWORD=your-16-char-app-password
+   SMTP_FROM=your-email@gmail.com
+   ALERT_RECEIVER_CRITICAL_EMAIL=devops-critical@yourdomain.com
+   ALERT_RECEIVER_WARNING_EMAIL=devops-warning@yourdomain.com
+   SMTP_REQUIRE_TLS=true
+   ```
+
+3. Synchronize credentials into Alertmanager:
+   ```cmd
+   python scripts/apply_alertmanager_env.py
+   ```
+   The script updates `alertmanager/alertmanager.yml` and calls `POST http://localhost:9093/-/reload` to hot-reload without container downtime.
+
+> [!TIP]
+> **Gmail Setup:** Enable 2-Step Verification in Google Account Settings, navigate to **Security → App Passwords**, generate a password for "DockPilot Alertmanager", and paste the 16-character token into `SMTP_AUTH_PASSWORD`.
+
+### Example PromQL Alert Expressions
+
+**Host CPU Usage**
 ```promql
-(1 - (
-  node_memory_MemAvailable_bytes /
-  node_memory_MemTotal_bytes
-)) * 100
+100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 85
 ```
 
-**Available Disk Space**
-
+**Host Memory Usage**
 ```promql
-(
-  node_filesystem_avail_bytes /
-  node_filesystem_size_bytes
-) * 100
+((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100) > 85
 ```
 
-**Monitoring Target Status**
-
+**Filesystem Available Space**
 ```promql
-up
+((node_filesystem_avail_bytes{fstype!~"tmpfs|rootfs|ramfs", mountpoint=~"/var/lib|/mnt/host/[cd]"} / node_filesystem_size_bytes{...}) * 100) < 10
 ```
 
 **Docker Container Health Status (DockPilot Exporter)**
-
 ```promql
 dockpilot_container_health_status == 0
 ```
 
+**Monitoring Infrastructure Targets Availability**
+```promql
+up == 0
+```
 
 ---
 
