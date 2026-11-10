@@ -273,6 +273,26 @@ Rule-based container failure prediction using historical resource information:
 - Inspect configuration issues.
 - Check potentially insecure Compose settings.
 
+### 4.15 Unified Web Dashboard (Port 8001)
+
+The entire DockPilot ecosystem is accessible and manageable through ONE unified, production-grade DevOps web dashboard at `http://localhost:8001`.
+
+#### Unified Navigation (14 Dedicated Sections):
+1. **Overview**: Executive dashboard displaying real-time Docker container counts, host resource meters (CPU %, Memory %, Disk %, Network I/O), infrastructure service status pills (6 services), Prometheus target health badges (6 targets), active alerts grouped by severity, recent incidents, and container health events.
+2. **Docker Containers**: Complete container lifecycle management, search, logs, stats, and run container modal.
+3. **Images**: Docker image repository view, pulling images from registries, tag inspection, and pruning.
+4. **Networks**: Dedicated Docker network inspection, driver details, subnet tracking, and creation.
+5. **Volumes**: Persistent volume management, mount points, drivers, and inspection.
+6. **Resource Monitoring**: Real-time canvas CPU, Memory, and Network charts with quick links to cAdvisor (:8085) and Grafana (:3000).
+7. **Container Health**: Real-time container health check monitor, failure states, reasons, and recovery attempts.
+8. **Prometheus Monitoring**: Live status of all 6 Prometheus scrape targets, all 11 production alert rules, and an embedded Grafana monitoring dashboard (`dockpilot-monitoring`) via an iframe.
+9. **Alert Management**: Alertmanager (:9093) integration, cluster status, active firing alerts grouped by severity, receiver channels, and routing policies.
+10. **Security Center**: Runtime container security auditor and historical audit trend tracking.
+11. **Incident History**: Incident detection, investigation with collected evidence, root-cause analysis, and human-in-the-loop approved recovery execution.
+12. **Docker Compose Management**: Compose project management, compose file storage, and Compose Security Auditor.
+13. **Historical Metrics**: Long-term CPU and memory metrics history from autoscaling, heuristic failure predictor, and container health event log.
+14. **System Settings**: Docker Engine runtime information, service port allocation matrix, persistent storage paths, and Alertmanager notification settings.
+
 ---
 
 ## 5. Environment Automation

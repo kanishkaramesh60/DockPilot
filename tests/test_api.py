@@ -361,3 +361,109 @@ def test_list_compose_projects():
 
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+
+# 12. Monitoring Services Endpoint
+def test_monitoring_services_endpoint():
+    response = client.get("/api/monitoring/services")
+    assert response.status_code == 200
+    data = response.json()
+    assert "services" in data
+    assert len(data["services"]) == 6
+    names = [s["name"] for s in data["services"]]
+    assert "Prometheus" in names
+    assert "Grafana" in names
+    assert "Alertmanager" in names
+    assert "cAdvisor" in names
+    assert "Node Exporter" in names
+    assert "DockPilot Backend" in names
+
+
+# 13. Prometheus Targets Endpoint
+def test_monitoring_prometheus_targets():
+    response = client.get("/api/monitoring/prometheus/targets")
+    assert response.status_code == 200
+    data = response.json()
+    assert "targets" in data
+    assert data["count"] == 6
+
+
+# 14. Prometheus Rules Endpoint
+def test_monitoring_prometheus_rules():
+    response = client.get("/api/monitoring/prometheus/rules")
+    assert response.status_code == 200
+    data = response.json()
+    assert "rules" in data
+    assert data["count"] == 11
+
+
+# 15. Alertmanager Alerts Endpoint
+def test_monitoring_alertmanager_alerts():
+    response = client.get("/api/monitoring/alertmanager/alerts")
+    assert response.status_code == 200
+    data = response.json()
+    assert "total" in data
+    assert "critical" in data
+    assert "warning" in data
+
+
+# 16. Alertmanager Status Endpoint
+def test_monitoring_alertmanager_status():
+    response = client.get("/api/monitoring/alertmanager/status")
+    assert response.status_code == 200
+    data = response.json()
+    assert "cluster_status" in data
+
+
+# 17. Unified Monitoring Overview Endpoint
+def test_monitoring_overview_endpoint():
+    response = client.get("/api/monitoring/overview")
+    assert response.status_code == 200
+    data = response.json()
+    assert "containers" in data
+    assert "host" in data
+    assert "services" in data
+    assert "prometheus_targets" in data
+    assert "alerts" in data
+    assert "cpu_percent" in data["host"]
+    assert "memory_percent" in data["host"]
+
+
+# 18. System Settings Endpoint
+def test_system_settings_endpoint():
+    response = client.get("/api/system/settings")
+    assert response.status_code == 200
+    data = response.json()
+    assert "version" in data
+    assert "ports" in data
+    assert "storage" in data
+    assert "smtp" in data
+    assert data["smtp"]["configured"] is True
+
+
+# 19. Unified Dashboard HTML and Navigation
+def test_unified_dashboard_html():
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.text
+    assert "DockPilot" in html
+
+    required_sections = [
+        'data-page="overview"',
+        'data-page="containers"',
+        'data-page="images"',
+        'data-page="networks"',
+        'data-page="volumes"',
+        'data-page="compose"',
+        'data-page="monitoring"',
+        'data-page="health"',
+        'data-page="prometheus"',
+        'data-page="alerts"',
+        'data-page="security"',
+        'data-page="incidents"',
+        'data-page="history"',
+        'data-page="settings"',
+    ]
+    for sec in required_sections:
+        assert sec in html, f"Missing navigation section {sec} in dashboard HTML"
+

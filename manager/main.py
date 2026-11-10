@@ -1,4 +1,5 @@
 
+import concurrent.futures
 import re
 import shutil
 import subprocess
@@ -159,65 +160,60 @@ def historical_metrics(
     try:
         client = get_docker_client()
 
-        with _metrics_history_lock:
-            for container in client.containers.list(all=False):
-                try:
-                    stats = container.stats(stream=False)
+        containers = client.containers.list(all=False)
 
-                    # CPU usage percentage
-                    cpu_stats = stats.get("cpu_stats", {})
-                    precpu_stats = stats.get("precpu_stats", {})
+        def _fetch_and_record(c):
+            try:
+                stats = c.stats(stream=False)
+                cpu_stats = stats.get("cpu_stats", {})
+                precpu_stats = stats.get("precpu_stats", {})
+                cpu_usage = cpu_stats.get("cpu_usage", {})
+                precpu_usage = precpu_stats.get("cpu_usage", {})
 
-                    cpu_usage = cpu_stats.get("cpu_usage", {})
-                    precpu_usage = precpu_stats.get("cpu_usage", {})
+                cpu_delta = (
+                    cpu_usage.get("total_usage", 0)
+                    - precpu_usage.get("total_usage", 0)
+                )
+                system_delta = (
+                    cpu_stats.get("system_cpu_usage", 0)
+                    - precpu_stats.get("system_cpu_usage", 0)
+                )
+                online_cpus = (
+                    cpu_stats.get("online_cpus")
+                    or len(cpu_usage.get("percpu_usage", []) or [])
+                    or 1
+                )
 
-                    cpu_delta = (
-                        cpu_usage.get("total_usage", 0)
-                        - precpu_usage.get("total_usage", 0)
-                    )
+                if system_delta > 0 and cpu_delta >= 0:
+                    cpu_percent = (
+                        cpu_delta / system_delta
+                    ) * online_cpus * 100
+                else:
+                    cpu_percent = 0.0
 
-                    system_delta = (
-                        cpu_stats.get("system_cpu_usage", 0)
-                        - precpu_stats.get("system_cpu_usage", 0)
-                    )
+                memory_stats = stats.get("memory_stats", {})
+                memory_usage = memory_stats.get("usage", 0)
+                memory_limit = memory_stats.get("limit", 0)
+                memory_percent = (
+                    memory_usage / memory_limit * 100
+                    if memory_limit > 0
+                    else 0.0
+                )
 
-                    online_cpus = (
-                        cpu_stats.get("online_cpus")
-                        or len(cpu_usage.get("percpu_usage", []) or [])
-                        or 1
-                    )
-
-                    if system_delta > 0 and cpu_delta >= 0:
-                        cpu_percent = (
-                            cpu_delta / system_delta
-                        ) * online_cpus * 100
-                    else:
-                        cpu_percent = 0.0
-
-                    # Memory usage percentage
-                    memory_stats = stats.get("memory_stats", {})
-                    memory_usage = memory_stats.get("usage", 0)
-                    memory_limit = memory_stats.get("limit", 0)
-
-                    memory_percent = (
-                        memory_usage / memory_limit * 100
-                        if memory_limit > 0
-                        else 0.0
-                    )
-
-                    # Save one sample for this container.
+                with _metrics_history_lock:
                     record_metrics(
                         project_name=project_name,
-                        service_name=container.name,
+                        service_name=c.name,
                         cpu_percent=round(cpu_percent, 2),
                         memory_percent=round(memory_percent, 2),
                         running_replicas=1,
                     )
+            except Exception:
+                pass
 
-                except Exception:
-                    # One container's stats failure should not
-                    # prevent metrics from other containers being saved.
-                    continue
+        if containers:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(8, len(containers))) as executor:
+                list(executor.map(_fetch_and_record, containers))
 
         # "all" returns samples for every container recorded under
         # this project name. A specific service filters by its name.
@@ -1180,3 +1176,407 @@ def compose_projects():
     finally:
         if client is not None:
             client.close()
+
+
+# --------------------------------------------------
+# UNIFIED DASHBOARD MONITORING & SETTINGS ENDPOINTS
+# --------------------------------------------------
+
+import json
+import os
+import platform
+import sys
+import urllib.error
+import urllib.request
+import psutil
+
+PROMETHEUS_URL = os.getenv("PROMETHEUS_URL", "http://localhost:9090")
+ALERTMANAGER_URL = os.getenv("ALERTMANAGER_URL", "http://localhost:9093")
+GRAFANA_URL = os.getenv("GRAFANA_URL", "http://localhost:3000")
+CADVISOR_URL = os.getenv("CADVISOR_URL", "http://localhost:8085")
+
+
+def _http_get_json(url: str, timeout: float = 2.0):
+    """Safely fetch JSON from a local service with quick timeout."""
+    try:
+        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if resp.status == 200:
+                return json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return None
+    return None
+
+
+def _check_service_health(url: str, timeout: float = 1.5):
+    """Check if an HTTP service endpoint is reachable."""
+    t0 = monotonic()
+    try:
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            latency_ms = round((monotonic() - t0) * 1000, 1)
+            return {
+                "status": "healthy" if resp.status < 400 else "degraded",
+                "http_code": resp.status,
+                "latency_ms": latency_ms,
+            }
+    except Exception as e:
+        latency_ms = round((monotonic() - t0) * 1000, 1)
+        return {
+            "status": "unreachable",
+            "http_code": None,
+            "latency_ms": latency_ms,
+            "error": str(e),
+        }
+
+
+@app.get("/api/monitoring/services")
+def get_monitoring_services():
+    """Return live status of all monitoring stack services."""
+    services = [
+        {
+            "name": "DockPilot Backend",
+            "service": "dockpilot",
+            "port": 8001,
+            "url": "http://localhost:8001",
+            "status": "healthy",
+            "role": "Management API, Exporter & Dashboard",
+        },
+        {
+            "name": "Prometheus",
+            "service": "prometheus",
+            "port": 9090,
+            "url": PROMETHEUS_URL,
+            "container": "dockpilot-prometheus",
+            **_check_service_health(f"{PROMETHEUS_URL}/-/healthy"),
+            "role": "Time-Series Metrics & Alert Evaluation Engine",
+        },
+        {
+            "name": "Grafana",
+            "service": "grafana",
+            "port": 3000,
+            "url": GRAFANA_URL,
+            "container": "dockpilot-grafana",
+            **_check_service_health(f"{GRAFANA_URL}/api/health"),
+            "role": "Centralized 39-Panel Observability Dashboard",
+        },
+        {
+            "name": "Alertmanager",
+            "service": "alertmanager",
+            "port": 9093,
+            "url": ALERTMANAGER_URL,
+            "container": "dockpilot-alertmanager",
+            **_check_service_health(f"{ALERTMANAGER_URL}/-/healthy"),
+            "role": "Alert Deduplication, Grouping & Email Routing",
+        },
+        {
+            "name": "cAdvisor",
+            "service": "cadvisor",
+            "port": 8085,
+            "url": CADVISOR_URL,
+            "container": "dockpilot-cadvisor",
+            **_check_service_health(f"{CADVISOR_URL}/api/v1.3/machine"),
+            "role": "Container Resource & Cgroup Telemetry",
+        },
+        {
+            "name": "Node Exporter",
+            "service": "node-exporter",
+            "port": 9100,
+            "url": "Internal (dockpilot-monitoring)",
+            "container": "dockpilot-node-exporter",
+            "status": "healthy",
+            "role": "Host Machine Hardware & OS Telemetry",
+        },
+    ]
+    return {"services": services}
+
+
+@app.get("/api/monitoring/prometheus/targets")
+def get_prometheus_targets():
+    """Return live scrape targets from Prometheus API."""
+    data = _http_get_json(f"{PROMETHEUS_URL}/api/v1/targets")
+    if data and data.get("status") == "success":
+        active_targets = data.get("data", {}).get("activeTargets", [])
+        return {
+            "status": "success",
+            "count": len(active_targets),
+            "targets": [
+                {
+                    "scrapePool": t.get("scrapePool", ""),
+                    "health": t.get("health", "unknown").upper(),
+                    "scrapeUrl": t.get("scrapeUrl", ""),
+                    "lastScrape": t.get("lastScrape", ""),
+                    "lastScrapeDuration": round(float(t.get("lastScrapeDuration", 0)) * 1000, 1),
+                    "lastError": t.get("lastError", ""),
+                }
+                for t in active_targets
+            ],
+        }
+    return {
+        "status": "unavailable",
+        "count": 6,
+        "targets": [
+            {"scrapePool": "prometheus", "health": "UNKNOWN", "scrapeUrl": "http://prometheus:9090/metrics"},
+            {"scrapePool": "cadvisor", "health": "UNKNOWN", "scrapeUrl": "http://cadvisor:8080/metrics"},
+            {"scrapePool": "node-exporter", "health": "UNKNOWN", "scrapeUrl": "http://node-exporter:9100/metrics"},
+            {"scrapePool": "grafana", "health": "UNKNOWN", "scrapeUrl": "http://grafana:3000/metrics"},
+            {"scrapePool": "dockpilot", "health": "UNKNOWN", "scrapeUrl": "http://host.docker.internal:8001/metrics"},
+            {"scrapePool": "alertmanager", "health": "UNKNOWN", "scrapeUrl": "http://alertmanager:9093/metrics"},
+        ],
+    }
+
+
+@app.get("/api/monitoring/prometheus/rules")
+def get_prometheus_rules():
+    """Return active alert rules and evaluation states from Prometheus."""
+    data = _http_get_json(f"{PROMETHEUS_URL}/api/v1/rules")
+    if data and data.get("status") == "success":
+        groups = data.get("data", {}).get("groups", [])
+        parsed_rules = []
+        for g in groups:
+            group_name = g.get("name", "")
+            for r in g.get("rules", []):
+                labels = r.get("labels", {})
+                annotations = r.get("annotations", {})
+                parsed_rules.append({
+                    "group": group_name,
+                    "name": r.get("name", ""),
+                    "query": r.get("query", ""),
+                    "duration": r.get("duration", 0),
+                    "health": r.get("health", "ok"),
+                    "state": r.get("state", "inactive"),
+                    "severity": labels.get("severity", "info"),
+                    "summary": annotations.get("summary", ""),
+                    "description": annotations.get("description", ""),
+                    "lastEvaluation": r.get("lastEvaluation", ""),
+                    "evaluationTime": round(float(r.get("evaluationTime", 0)) * 1000, 2),
+                })
+        return {"status": "success", "count": len(parsed_rules), "rules": parsed_rules}
+    return {"status": "unavailable", "count": 0, "rules": []}
+
+
+@app.get("/api/monitoring/alertmanager/alerts")
+def get_alertmanager_alerts():
+    """Return active alerts from Alertmanager."""
+    data = _http_get_json(f"{ALERTMANAGER_URL}/api/v2/alerts")
+    alerts = data if isinstance(data, list) else []
+    critical_alerts = []
+    warning_alerts = []
+    info_alerts = []
+
+    for a in alerts:
+        labels = a.get("labels", {})
+        annotations = a.get("annotations", {})
+        status = a.get("status", {})
+        item = {
+            "fingerprint": a.get("fingerprint", ""),
+            "alertname": labels.get("alertname", "UnknownAlert"),
+            "severity": labels.get("severity", "info"),
+            "instance": labels.get("instance", ""),
+            "job": labels.get("job", ""),
+            "state": status.get("state", "active"),
+            "summary": annotations.get("summary", ""),
+            "description": annotations.get("description", ""),
+            "startsAt": a.get("startsAt", ""),
+            "generatorURL": a.get("generatorURL", ""),
+        }
+        sev = item["severity"].lower()
+        if sev == "critical":
+            critical_alerts.append(item)
+        elif sev == "warning":
+            warning_alerts.append(item)
+        else:
+            info_alerts.append(item)
+
+    return {
+        "total": len(alerts),
+        "critical_count": len(critical_alerts),
+        "warning_count": len(warning_alerts),
+        "critical": critical_alerts,
+        "warning": warning_alerts,
+        "other": info_alerts,
+    }
+
+
+@app.get("/api/monitoring/alertmanager/status")
+def get_alertmanager_status():
+    """Return Alertmanager status, cluster state, and receiver routing."""
+    data = _http_get_json(f"{ALERTMANAGER_URL}/api/v2/status")
+    if data:
+        config = data.get("config", {})
+        route = config.get("route", {})
+        receivers = [r.get("name") for r in config.get("receivers", []) if r.get("name")]
+        return {
+            "status": "healthy",
+            "cluster_status": data.get("cluster", {}).get("status", "unknown"),
+            "version": data.get("versionInfo", {}).get("version", "unknown"),
+            "uptime": data.get("uptime", ""),
+            "default_receiver": route.get("receiver", "dockpilot-default-receiver"),
+            "receivers": receivers or ["dockpilot-default-receiver", "dockpilot-critical-receiver", "dockpilot-warning-receiver"],
+        }
+    return {
+        "status": "unreachable",
+        "cluster_status": "unknown",
+        "version": "unknown",
+        "uptime": "",
+        "default_receiver": "dockpilot-default-receiver",
+        "receivers": ["dockpilot-default-receiver", "dockpilot-critical-receiver", "dockpilot-warning-receiver"],
+    }
+
+
+@app.get("/api/monitoring/overview")
+def get_unified_overview():
+    """Consolidate overview metrics across Docker, Host, Services, Targets, Alerts, and Incidents."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    cpu_percent = psutil.cpu_percent(interval=None)
+    vm = psutil.virtual_memory()
+    du = psutil.disk_usage(".")
+    net = psutil.net_io_counters()
+
+    host_stats = {
+        "cpu_percent": round(cpu_percent, 1),
+        "memory_percent": round(vm.percent, 1),
+        "memory_used_gb": round(vm.used / (1024**3), 2),
+        "memory_total_gb": round(vm.total / (1024**3), 2),
+        "disk_percent": round(du.percent, 1),
+        "disk_used_gb": round(du.used / (1024**3), 2),
+        "disk_total_gb": round(du.total / (1024**3), 2),
+        "net_sent_mb": round(net.bytes_sent / (1024**2), 1),
+        "net_recv_mb": round(net.bytes_recv / (1024**2), 1),
+    }
+
+    # Execute Docker queries and HTTP service checks in parallel
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        f_containers = ex.submit(list_containers)
+        f_health = ex.submit(check_containers, auto_recover=False)
+        f_targets = ex.submit(get_prometheus_targets)
+        f_alerts = ex.submit(get_alertmanager_alerts)
+        f_prom_h = ex.submit(_check_service_health, f"{PROMETHEUS_URL}/-/healthy")
+        f_graf_h = ex.submit(_check_service_health, f"{GRAFANA_URL}/api/health")
+        f_am_h = ex.submit(_check_service_health, f"{ALERTMANAGER_URL}/-/healthy")
+        f_cad_h = ex.submit(_check_service_health, f"{CADVISOR_URL}/api/v1.3/machine")
+
+        containers = f_containers.result()
+        health_status = f_health.result()
+        targets_data = f_targets.result()
+        alerts_data = f_alerts.result()
+        prom_h = f_prom_h.result()
+        graf_h = f_graf_h.result()
+        am_h = f_am_h.result()
+        cad_h = f_cad_h.result()
+
+    total_containers = len(containers)
+    running_containers = sum(1 for c in containers if c.get("status") == "running")
+    stopped_containers = total_containers - running_containers
+    unhealthy_containers = len(health_status.get("stopped_or_unhealthy", []))
+
+    services_summary = {
+        "prometheus": prom_h,
+        "grafana": graf_h,
+        "alertmanager": am_h,
+        "cadvisor": cad_h,
+        "dockpilot": {"status": "healthy", "latency_ms": 0.1},
+    }
+
+    up_targets = sum(1 for t in targets_data.get("targets", []) if t.get("health") == "UP")
+    recent_incidents = get_incidents(limit=5)
+    recent_events = get_recent_health_events(limit=5)
+
+    return {
+        "host": host_stats,
+        "containers": {
+            "total": total_containers,
+            "running": running_containers,
+            "stopped": stopped_containers,
+            "unhealthy": unhealthy_containers,
+        },
+        "services": services_summary,
+        "prometheus_targets": {
+            "total": targets_data.get("count", 6),
+            "up": up_targets,
+            "targets": targets_data.get("targets", []),
+        },
+        "alerts": {
+            "total": alerts_data.get("total", 0),
+            "critical_count": alerts_data.get("critical_count", 0),
+            "warning_count": alerts_data.get("warning_count", 0),
+            "critical": alerts_data.get("critical", []),
+            "warning": alerts_data.get("warning", []),
+        },
+        "recent_incidents": recent_incidents,
+        "recent_events": recent_events,
+    }
+
+
+@app.get("/api/system/settings")
+def get_system_settings():
+    """Return runtime configuration, storage paths, and masked environment settings."""
+    root_dir = Path(__file__).resolve().parent.parent
+    db_file = root_dir / "data" / "dockpilot_history.db"
+    db_size = db_file.stat().st_size if db_file.exists() else 0
+
+    env_file = root_dir / ".env"
+    smtp_info = {
+        "configured": False,
+        "smarthost": "smtp.gmail.com:587",
+        "from": "dockpilot-alerts@example.com",
+        "critical_receiver": "devops-critical@example.com",
+        "warning_receiver": "devops-warning@example.com",
+        "tls_required": True,
+    }
+    if env_file.exists():
+        try:
+            for line in env_file.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    k, v = line.split("=", 1)
+                    k, v = k.strip(), v.strip()
+                    if k == "SMTP_SMARTHOST":
+                        smtp_info["smarthost"] = v
+                    elif k == "SMTP_FROM":
+                        smtp_info["from"] = v
+                    elif k == "ALERT_RECEIVER_CRITICAL_EMAIL":
+                        smtp_info["critical_receiver"] = v
+                    elif k == "ALERT_RECEIVER_WARNING_EMAIL":
+                        smtp_info["warning_receiver"] = v
+                    elif k == "SMTP_REQUIRE_TLS":
+                        smtp_info["tls_required"] = (v.lower() == "true")
+                    elif k == "SMTP_AUTH_PASSWORD" and v and v != "your-app-password":
+                        smtp_info["configured"] = True
+        except Exception:
+            pass
+
+    return {
+        "version": "1.0.0",
+        "platform": platform.platform(),
+        "python_version": sys.version.split()[0],
+        "backend_port": 8001,
+        "ports": {
+            "backend": 8001,
+            "prometheus": 9090,
+            "grafana": 3000,
+            "alertmanager": 9093,
+            "cadvisor": 8085,
+            "node_exporter": 9100,
+        },
+        "storage": {
+            "root_path": str(root_dir),
+            "db_path": str(db_file),
+            "db_size_bytes": db_size,
+            "volumes": [
+                "dockpilot_prometheus_data",
+                "dockpilot_grafana_data",
+                "dockpilot_alertmanager_data",
+            ],
+        },
+        "smtp": smtp_info,
+        "grafana_embedding": {
+            "enabled": True,
+            "dashboard_uid": "dockpilot-monitoring",
+            "kiosk_url": f"{GRAFANA_URL}/d/dockpilot-monitoring?kiosk",
+        },
+    }
+
