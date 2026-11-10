@@ -3,7 +3,8 @@ setlocal enabledelayedexpansion
 
 REM ==============================================================================
 REM DockPilot Monitoring Infrastructure Health Check Script
-REM Checks container statuses, target health, and metric availability
+REM Checks container statuses, target health, metric availability, Grafana,
+REM and Prometheus alert rule evaluation readiness
 REM Compatible with Windows Command Prompt (cmd.exe)
 REM ==============================================================================
 
@@ -18,7 +19,7 @@ set FAIL_COUNT=0
 REM ------------------------------------------------------------------------------
 REM Check 1: Docker Daemon Status
 REM ------------------------------------------------------------------------------
-echo [1/8] Checking Docker daemon status...
+echo [1/11] Checking Docker daemon status...
 docker info >nul 2>&1
 if %errorlevel% equ 0 (
     echo   [PASS] Docker daemon is running and accessible.
@@ -33,7 +34,7 @@ echo.
 REM ------------------------------------------------------------------------------
 REM Check 2: Prometheus Container Status
 REM ------------------------------------------------------------------------------
-echo [2/8] Checking dockpilot-prometheus container status...
+echo [2/11] Checking dockpilot-prometheus container status...
 docker ps -f name=^dockpilot-prometheus$ -f status=running -q | findstr /r "." >nul 2>&1
 if %errorlevel% equ 0 (
     echo   [PASS] Container 'dockpilot-prometheus' is running.
@@ -47,7 +48,7 @@ echo.
 REM ------------------------------------------------------------------------------
 REM Check 3: cAdvisor Container Status
 REM ------------------------------------------------------------------------------
-echo [3/8] Checking dockpilot-cadvisor container status...
+echo [3/11] Checking dockpilot-cadvisor container status...
 docker ps -f name=^dockpilot-cadvisor$ -f status=running -q | findstr /r "." >nul 2>&1
 if %errorlevel% equ 0 (
     echo   [PASS] Container 'dockpilot-cadvisor' is running.
@@ -61,7 +62,7 @@ echo.
 REM ------------------------------------------------------------------------------
 REM Check 4: Node Exporter Container Status
 REM ------------------------------------------------------------------------------
-echo [4/8] Checking dockpilot-node-exporter container status...
+echo [4/11] Checking dockpilot-node-exporter container status...
 docker ps -f name=^dockpilot-node-exporter$ -f status=running -q | findstr /r "." >nul 2>&1
 if %errorlevel% equ 0 (
     echo   [PASS] Container 'dockpilot-node-exporter' is running.
@@ -75,7 +76,7 @@ echo.
 REM ------------------------------------------------------------------------------
 REM Check 5: Prometheus Server Readiness
 REM ------------------------------------------------------------------------------
-echo [5/8] Checking Prometheus HTTP endpoint: http://localhost:9090/-/healthy...
+echo [5/11] Checking Prometheus HTTP endpoint: http://localhost:9090/-/healthy...
 curl.exe -s -f http://localhost:9090/-/healthy >nul 2>&1
 if %errorlevel% equ 0 (
     echo   [PASS] Prometheus server is healthy [HTTP 200].
@@ -89,7 +90,7 @@ echo.
 REM ------------------------------------------------------------------------------
 REM Check 6: Prometheus Target Health
 REM ------------------------------------------------------------------------------
-echo [6/8] Checking Prometheus target health status...
+echo [6/11] Checking Prometheus target health status...
 
 REM 6a. Prometheus target
 curl.exe -s --get "http://localhost:9090/api/v1/query" --data-urlencode "query=up{job='prometheus'}" 2>nul | findstr /c:"\"1\"" >nul 2>&1
@@ -120,12 +121,32 @@ if %errorlevel% equ 0 (
     echo   [FAIL] Target 'node-exporter' is DOWN or missing.
     set /a FAIL_COUNT+=1
 )
+
+REM 6d. Grafana target
+curl.exe -s --get "http://localhost:9090/api/v1/query" --data-urlencode "query=up{job='grafana'}" 2>nul | findstr /c:"\"1\"" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   [PASS] Target 'grafana' is UP.
+    set /a PASS_COUNT+=1
+) else (
+    echo   [FAIL] Target 'grafana' is DOWN or missing.
+    set /a FAIL_COUNT+=1
+)
+
+REM 6e. DockPilot exporter target
+curl.exe -s --get "http://localhost:9090/api/v1/query" --data-urlencode "query=up{job='dockpilot'}" 2>nul | findstr /c:"\"1\"" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   [PASS] Target 'dockpilot' is UP.
+    set /a PASS_COUNT+=1
+) else (
+    echo   [FAIL] Target 'dockpilot' is DOWN or missing.
+    set /a FAIL_COUNT+=1
+)
 echo.
 
 REM ------------------------------------------------------------------------------
 REM Check 7: Node Exporter Metrics Availability
 REM ------------------------------------------------------------------------------
-echo [7/8] Checking Node Exporter metrics availability...
+echo [7/11] Checking Node Exporter metrics availability...
 
 REM 7a. Direct metrics scrape inside container
 docker exec dockpilot-node-exporter wget -qO- http://localhost:9100/metrics 2>nul | findstr /c:"node_cpu_seconds_total" >nul 2>&1
@@ -161,7 +182,7 @@ echo.
 REM ------------------------------------------------------------------------------
 REM Check 8: cAdvisor Metrics and Dashboard
 REM ------------------------------------------------------------------------------
-echo [8/8] Checking cAdvisor metrics and dashboard...
+echo [8/11] Checking cAdvisor metrics and dashboard...
 
 REM 8a. container_cpu_usage_seconds_total via Prometheus
 curl.exe -s --get "http://localhost:9090/api/v1/query" --data-urlencode "query=container_cpu_usage_seconds_total" 2>nul | findstr /c:"container_cpu_usage_seconds_total" >nul 2>&1
@@ -180,6 +201,104 @@ if %errorlevel% equ 0 (
     set /a PASS_COUNT+=1
 ) else (
     echo   [FAIL] cAdvisor web dashboard is not reachable or returned an error.
+    set /a FAIL_COUNT+=1
+)
+echo.
+
+REM ------------------------------------------------------------------------------
+REM Check 9: Grafana Container Status & Health
+REM ------------------------------------------------------------------------------
+echo [9/11] Checking dockpilot-grafana container status and health...
+
+REM 9a. Grafana container running
+docker ps -f name=^dockpilot-grafana$ -f status=running -q | findstr /r "." >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   [PASS] Container 'dockpilot-grafana' is running.
+    set /a PASS_COUNT+=1
+) else (
+    echo   [FAIL] Container 'dockpilot-grafana' is not running.
+    set /a FAIL_COUNT+=1
+)
+
+REM 9b. Grafana HTTP health endpoint
+curl.exe -s -f http://localhost:3000/api/health >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   [PASS] Grafana HTTP health endpoint [http://localhost:3000/api/health] responded [HTTP 200].
+    set /a PASS_COUNT+=1
+) else (
+    echo   [FAIL] Grafana HTTP health endpoint is not reachable or unhealthy.
+    set /a FAIL_COUNT+=1
+)
+echo.
+
+REM ------------------------------------------------------------------------------
+REM Check 10: Grafana Provisioning & Dashboard Readiness
+REM ------------------------------------------------------------------------------
+echo [10/11] Checking Grafana provisioning and dashboard availability...
+
+REM 10a. Prometheus Datasource Provisioning Check
+curl.exe -s -u admin:admin http://localhost:3000/api/datasources/uid/prometheus/health 2>nul | findstr /c:"\"status\":\"OK\"" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   [PASS] Grafana Prometheus datasource is provisioned and healthy [status: OK].
+    set /a PASS_COUNT+=1
+) else (
+    echo   [FAIL] Grafana Prometheus datasource is not healthy or missing.
+    set /a FAIL_COUNT+=1
+)
+
+REM 10b. Dashboard Provisioning Check
+curl.exe -s -u admin:admin http://localhost:3000/api/dashboards/uid/dockpilot-monitoring 2>nul | findstr /c:"dockpilot-monitoring" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   [PASS] Grafana DockPilot monitoring dashboard is auto-provisioned and accessible.
+    set /a PASS_COUNT+=1
+) else (
+    echo   [FAIL] Grafana DockPilot monitoring dashboard is missing or not provisioned.
+    set /a FAIL_COUNT+=1
+)
+echo.
+
+REM ------------------------------------------------------------------------------
+REM Check 11: Prometheus Alert Rules & Alert Evaluation Readiness
+REM ------------------------------------------------------------------------------
+echo [11/11] Checking Prometheus alert rules and evaluation status...
+
+REM 11a. Alert rules loaded in Prometheus
+curl.exe -s http://localhost:9090/api/v1/rules 2>nul | findstr /c:"dockpilot_infrastructure_alerts" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   [PASS] Prometheus alert rules file 'alert_rules.yml' is loaded.
+    set /a PASS_COUNT+=1
+) else (
+    echo   [FAIL] Prometheus alert rules file 'alert_rules.yml' is not loaded.
+    set /a FAIL_COUNT+=1
+)
+
+REM 11b. Alert rule evaluation health
+curl.exe -s http://localhost:9090/api/v1/rules 2>nul | findstr /c:"\"health\":\"ok\"" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   [PASS] Prometheus alert rules are evaluating successfully without errors [health: ok].
+    set /a PASS_COUNT+=1
+) else (
+    echo   [FAIL] Prometheus alert rules evaluation encountered errors.
+    set /a FAIL_COUNT+=1
+)
+
+REM 11c. Prometheus ALERTS time-series query
+curl.exe -s --get "http://localhost:9090/api/v1/query" --data-urlencode "query=ALERTS" 2>nul | findstr /c:"\"status\":\"success\"" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   [PASS] Prometheus ALERTS evaluation pipeline is active and responding.
+    set /a PASS_COUNT+=1
+) else (
+    echo   [FAIL] Prometheus ALERTS query failed.
+    set /a FAIL_COUNT+=1
+)
+
+REM 11d. Custom Container Health metric scraped
+curl.exe -s --get "http://localhost:9090/api/v1/query" --data-urlencode "query=dockpilot_container_health_status" 2>nul | findstr /c:"dockpilot_container_health_status" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   [PASS] Custom metric 'dockpilot_container_health_status' is actively scraped by Prometheus.
+    set /a PASS_COUNT+=1
+) else (
+    echo   [FAIL] Custom metric 'dockpilot_container_health_status' is missing in Prometheus.
     set /a FAIL_COUNT+=1
 )
 echo.

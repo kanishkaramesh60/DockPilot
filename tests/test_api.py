@@ -14,6 +14,70 @@ def test_health_endpoint():
     assert response.json() == {"status": "healthy"}
 
 
+# 1b. Prometheus metrics endpoint
+def test_metrics_endpoint():
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    assert "dockpilot_container_health_status" in response.text
+    assert "# HELP dockpilot_container_health_status" in response.text
+    assert "# TYPE dockpilot_container_health_status gauge" in response.text
+
+
+def test_metrics_endpoint_container_states():
+    mock_containers = [
+        {"id": "c11111111111", "name": "healthy-svc", "health": "healthy"},
+        {"id": "c22222222222", "name": "failing-svc", "health": "unhealthy"},
+        {"id": "c33333333333", "name": "no-check-svc", "health": "not_configured"},
+    ]
+    with patch("main._inspect_containers", return_value=mock_containers):
+        response = client.get("/metrics")
+
+    assert response.status_code == 200
+    text = response.text
+    assert 'dockpilot_container_health_status{container_name="healthy-svc",container_id="c11111111111",health="healthy"} 1' in text
+    assert 'dockpilot_container_health_status{container_name="failing-svc",container_id="c22222222222",health="unhealthy"} 0' in text
+    assert 'dockpilot_container_health_status{container_name="no-check-svc",container_id="c33333333333",health="not_configured"} -1' in text
+
+
+def test_prometheus_scrape_and_alert_rule_alignment():
+    import yaml
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+
+    # 1. Verify prometheus.yml scrape targets
+    prom_cfg_path = root / "prometheus" / "prometheus.yml"
+    assert prom_cfg_path.exists()
+    prom_cfg = yaml.safe_load(prom_cfg_path.read_text(encoding="utf-8"))
+
+    jobs = {job["job_name"]: job for job in prom_cfg.get("scrape_configs", [])}
+    assert "dockpilot" in jobs
+    assert "host.docker.internal:8001" in jobs["dockpilot"]["static_configs"][0]["targets"]
+    assert jobs["dockpilot"].get("metrics_path", "/metrics") == "/metrics"
+    # Ensure all original jobs are preserved
+    for expected_job in ["prometheus", "cadvisor", "node-exporter", "grafana"]:
+        assert expected_job in jobs
+
+    # 2. Verify alert_rules.yml ContainerUnhealthy alignment
+    rules_path = root / "prometheus" / "alert_rules.yml"
+    assert rules_path.exists()
+    rules_cfg = yaml.safe_load(rules_path.read_text(encoding="utf-8"))
+
+    all_rules = {}
+    for group in rules_cfg.get("groups", []):
+        for rule in group.get("rules", []):
+            all_rules[rule["alert"]] = rule
+
+    assert "ContainerUnhealthy" in all_rules
+    unhealthy_rule = all_rules["ContainerUnhealthy"]
+    assert unhealthy_rule["expr"] == "dockpilot_container_health_status == 0"
+    assert "$labels.container_name" in unhealthy_rule["annotations"]["summary"]
+    assert "$labels.container_name" in unhealthy_rule["annotations"]["description"]
+    assert "$labels.container_id" in unhealthy_rule["annotations"]["description"]
+
+
+
+
 # 2. Dashboard route
 def test_dashboard_route():
     response = client.get("/")

@@ -1,460 +1,549 @@
-<div align="center">
+# DockPilot
+### Docker Engine Management, Monitoring and Container Security Dashboard
 
-# 🚢 DockPilot
+DockPilot is a local DevOps monitoring and container management platform designed to provide centralized visibility into Docker containers, system resources, application health, and infrastructure alerts.
 
-### Docker Management, Monitoring & Container Security Dashboard
-
-**Monitor → Detect → Investigate → Recommend → Approve → Recover → Verify → Record**
-
-[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
-[![Tests](https://img.shields.io/badge/Tests-Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org/)
-
-[**📖 API Docs**](#-api-documentation) · [**🚀 Quick Start**](#-quick-start) · [**🗺️ Roadmap**](#️-roadmap)
-
-</div>
+It integrates Docker Engine, Prometheus, Grafana, cAdvisor, Node Exporter, and Alertmanager to create an all-in-one monitoring environment. The platform provides real-time metrics, historical monitoring, preconfigured dashboards, configurable alert rules, and notification management through a unified local environment.
 
 ---
 
-## 📌 Overview
+## Table of Contents
 
-**DockPilot** is a web-based platform that brings Docker container operations, resource monitoring, predictive failure detection, security auditing, and guided incident recovery into a single dashboard.
-
-Instead of juggling the CLI, separate monitoring tools, and manual security reviews, DockPilot gives you one place to **see what your containers are doing, catch problems early, harden your configurations, and recover safely with human approval**.
-
-> 🔐 **Security-first by design:** Compose files are validated before deployment, and recovery actions are never executed without explicit human approval.
-
----
-
-## 📑 Table of Contents
-
-- [Key Features](#-key-features)
-- [Incident Workflow](#-incident-intelligence--guided-recovery)
-- [Tech Stack](#️-tech-stack)
-- [Architecture](#️-architecture)
-- [Monitoring Infrastructure](#-monitoring-infrastructure-prometheus-cadvisor-node-exporter)
-- [Quick Start](#-quick-start)
-- [API Documentation](#-api-documentation)
-- [Testing](#-testing)
-- [Security Considerations](#-security-considerations)
-- [Roadmap](#️-roadmap)
-- [Author](#-author)
+1. [Project Overview](#1-project-overview)
+2. [Technology Stack](#2-technology-stack)
+3. [System Architecture](#3-system-architecture)
+4. [Core Features](#4-core-features)
+5. [Environment Automation](#5-environment-automation)
+6. [Project Directory Structure](#6-project-directory-structure)
+7. [Installation and Setup](#7-installation-and-setup)
+8. [Alert Configuration](#8-alert-configuration)
+9. [Testing and Validation](#9-testing-and-validation)
+10. [Security Considerations](#10-security-considerations)
+11. [Expected Project Deliverables](#11-expected-project-deliverables)
+12. [Future Scope](#12-future-scope)
+13. [Project Information](#13-project-information)
+14. [Conclusion](#14-conclusion)
 
 ---
 
-## ✨ Key Features
+## 1. Project Overview
 
-| | Feature | What it does |
-|---|---|---|
-| 🐳 | **Container Management** | View running and stopped containers; start, stop, restart, inspect, and read logs from one dashboard. |
-| 📊 | **Real-Time Monitoring** | Track CPU, memory, and network activity with live charts and stored historical metrics. |
-| 🔮 | **Predictive Failure Detection** | Analyze metrics to spot abnormal utilization patterns and flag likely failures before they happen. |
-| ❤️ | **Health Monitoring** | Detect unhealthy, restarting, and repeatedly crashing containers, with a record of health events. |
-| 🧾 | **Compose Management & Security** | Create and validate Docker Compose files, flagging risky settings before deployment. |
-| 🛡️ | **Runtime Security Auditing** | Run security checks on containers and keep a searchable audit history. |
-| 🚨 | **Incident Intelligence** | Detect, investigate, and recover from incidents with human-approved actions. |
+Managing Docker containers requires continuous monitoring of resource consumption, container health, infrastructure availability, and potential failures.
 
-<details>
-<summary><b>🔍 Feature details (click to expand)</b></summary>
+DockPilot addresses these requirements by combining container management and infrastructure monitoring tools into a single local platform.
 
-### 1. Docker Container Management
-- View running and stopped containers
-- Start, stop, and restart containers
-- Inspect container details
-- Access container logs
-- Manage everything through a centralized dashboard
+The system collects metrics from Docker containers and the host monitoring environment, stores time-series data in Prometheus, visualizes metrics through Grafana, and processes alerts through Alertmanager.
 
-### 2. Real-Time Container Monitoring
-- CPU utilization
-- Memory consumption
-- Network activity
-- Graphical visualizations of resource usage
-- Historical monitoring metrics
+### Main Objectives
 
-### 3. Predictive Container Failure Detection
-- Analyzes container monitoring metrics
-- Identifies potential container failures
-- Detects abnormal resource utilization patterns
-- Generates predictive insights for proactive maintenance
-
-### 4. Container Health Monitoring
-- Monitors container health status
-- Identifies unhealthy and restarting containers
-- Detects repeated container restarts
-- Maintains health events and status information
-
-### 5. Docker Compose Management & Security
-- Create and manage Compose configurations
-- Validate configurations before deployment
-- Detect potentially insecure configurations, including:
-  - ⚠️ Privileged container settings
-  - ⚠️ Host networking
-  - ⚠️ Unsafe security options
-  - ⚠️ Sensitive host-path mounts
-  - ⚠️ Docker socket mounts
-
-### 6. Runtime Docker Security Auditing
-- Performs security checks on Docker containers
-- Identifies potential configuration risks
-- Maintains security audit history
-- Provides visibility into detected issues
-
-</details>
+- Monitor Docker containers and system resource utilization.
+- Provide centralized monitoring through Grafana dashboards.
+- Collect real-time and historical infrastructure metrics.
+- Detect abnormal resource utilization and container health issues.
+- Generate alerts based on configurable thresholds.
+- Route and manage notifications using Alertmanager.
+- Automate the monitoring environment setup.
+- Provide a reproducible local DevOps sandbox.
 
 ---
 
-## 🚨 Incident Intelligence & Guided Recovery
+## 2. Technology Stack
 
-DockPilot follows a structured, auditable incident workflow where **a human always approves the fix**:
-
-```mermaid
-flowchart LR
-    A[📡 Monitor] --> B[🔎 Detect]
-    B --> C[🧠 Investigate]
-    C --> D[💡 Recommend]
-    D --> E{👤 Human<br/>Approval}
-    E -- Approved --> F[🛠️ Recover]
-    E -- Rejected --> H[📝 Record]
-    F --> G[✅ Verify]
-    G --> H
-```
-
-- **Detect** unhealthy, stopped, and repeatedly restarting containers
-- **Investigate** detected incidents
-- **Recommend** recovery actions
-- **Require human approval** before running any supported recovery action
-- **Verify** container status after recovery
-- **Record** results and maintain a recovery history
-
----
-
-## 🛠️ Tech Stack
-
-| Category | Technologies |
+| Technology | Purpose |
 |---|---|
-| **Backend** | Python, FastAPI |
-| **Frontend** | HTML, CSS, JavaScript |
-| **Container Management** | Docker Engine, Docker SDK for Python |
-| **System Monitoring** | psutil |
-| **DevOps Monitoring** | Prometheus, cAdvisor, Node Exporter |
-| **Config Validation** | PyYAML |
-| **Database** | SQLite |
-| **Visualization** | JavaScript Charts |
-| **Testing** | Pytest |
-| **Version Control** | Git, GitHub |
+| Python | Backend application and monitoring logic |
+| FastAPI | Backend REST API |
+| Docker Engine | Container management |
+| Docker Compose | Monitoring stack orchestration |
+| Prometheus | Metrics collection and storage |
+| Grafana | Monitoring dashboards and visualization |
+| cAdvisor | Docker container metrics |
+| Node Exporter | System-level metrics |
+| Alertmanager | Alert routing and notification management |
+| SQLite | Application history and monitoring records |
+| HTML, CSS, JavaScript | Dashboard frontend |
+| Batch / Shell scripts | Environment automation |
+| Git and GitHub | Version control and project distribution |
+| Vagrant / VirtualBox | Reproducible VM-based setup option |
 
 ---
 
-## 🏗️ Architecture
+## 3. System Architecture
 
-```mermaid
-flowchart TB
-    UI[🖥️ Dashboard<br/>HTML · CSS · JS]
-    API[⚡ FastAPI Backend<br/>manager/main.py]
-    DS[docker_service]
-    MC[metrics_collector]
-    FP[failure_predictor]
-    CS[compose_security]
-    IE[incident_engine /<br/>incident_recovery]
-    DB[(SQLite)]
-    DE[🐳 Docker Engine]
+```text
+                  DOCKPILOT
+                      |
+          +-----------+-----------+
+          |                       |
+    Docker Management       Monitoring Stack
+          |                       |
+     Docker Engine          +-----+------+
+          |                 |            |
+    Container State      Prometheus   Exporters
+    Container Controls      |         /       \
+    Health Information      |    Node Exporter cAdvisor
+          |                 |
+          +--------+--------+
+                   |
+              Grafana
+                   |
+          Preconfigured Dashboards
+                   |
+             Prometheus
+             Alert Rules
+                   |
+             Alertmanager
+                   |
+          +--------+---------+
+          |                  |
+      Alert Routing     Notifications
+          |
+    Email / Severity /
+    Grouping / Deduplication
 
-    UI <--> API
-    API --> DS & MC & FP & CS & IE
-    DS --> DE
-    MC --> DE
-    MC --> DB
-    FP --> DB
-    IE --> DB
+       DockPilot Backend
+              |
+       FastAPI REST API
+              |
+       SQLite History
 ```
 
-### Project Structure
+---
+
+## 4. Core Features
+
+### 4.1 Docker Container Management
+
+DockPilot provides a centralized interface to manage Docker containers using the local Docker Engine.
+
+- List available Docker containers.
+- Display container names, IDs, images, and status.
+- Start, stop, and restart containers.
+- Inspect container information.
+- Monitor container health status.
+- Track container restart information.
+- Display container port mappings.
+
+### 4.2 Real-Time Container Monitoring
+
+- Container CPU utilization.
+- Container memory consumption.
+- Container network activity.
+- Container health monitoring.
+- Container restart tracking.
+- Historical resource utilization.
+- Container-level monitoring visualizations.
+
+### 4.3 System Resource Monitoring
+
+- CPU utilization monitoring.
+- Memory utilization monitoring.
+- Available memory tracking.
+- Disk space monitoring.
+- Filesystem utilization.
+- Network monitoring.
+- Historical system resource metrics.
+
+### 4.4 Prometheus Metrics Collection
+
+Prometheus acts as the central metrics collection and time-series monitoring system.
+
+- Configurable scrape intervals.
+- Exporter-based metric collection.
+- Prometheus self-monitoring.
+- cAdvisor, Node Exporter, and Grafana metrics integration.
+- DockPilot backend metrics integration.
+- Historical time-series storage.
+- PromQL-based metric queries.
+- Target health monitoring.
+
+### 4.5 cAdvisor Integration
+
+cAdvisor collects Docker container resource metrics:
+
+- Container CPU usage.
+- Container memory usage.
+- Container network statistics.
+- Container resource consumption.
+- Container-level performance information.
+
+### 4.6 Node Exporter Integration
+
+Node Exporter provides system-level metrics:
+
+- CPU utilization.
+- Memory statistics.
+- Filesystem usage.
+- Disk availability.
+- Network statistics.
+- System-level resource information.
+
+### 4.7 Grafana Monitoring Dashboard
+
+Grafana provides centralized visualization using Prometheus as its metrics datasource.
+
+| Section | Contents |
+|---|---|
+| **A. System Overview** | Overall resource utilization, monitoring environment status, key infrastructure metrics |
+| **B. CPU Monitoring** | CPU utilization, usage trends, idle time |
+| **C. Memory Monitoring** | Total memory, available memory, used memory percentage, utilization trends |
+| **D. Disk and Filesystem** | Available disk space, filesystem utilization, disk usage percentage |
+| **E. Docker Container Monitoring** | Container CPU utilization, memory consumption, resource metrics |
+| **F. Monitoring Health** | Prometheus status, exporter availability, monitoring target health |
+| **G. Alert Monitoring** | Active alerts, alert severity, rule status, threshold violations |
+
+### 4.8 Prometheus Alert Rules
+
+Prometheus evaluates configured alert rules to identify infrastructure and container problems.
+
+| Alert | Condition |
+|---|---|
+| High CPU Usage | CPU usage exceeds 85% |
+| Critical CPU Usage | CPU usage exceeds 95% |
+| High Memory Usage | Memory usage exceeds 85% |
+| Critical Memory Usage | Memory usage exceeds 95% |
+| Low Disk Space | Available disk space falls below 10% |
+| Critical Disk Space | Available disk space falls below 5% |
+| Container High CPU | Container CPU usage exceeds the configured threshold |
+| Container High Memory | Container memory usage exceeds the configured threshold |
+| Container Unhealthy | Docker reports an unhealthy container |
+| Prometheus Target Down | A monitored target becomes unavailable |
+| Prometheus Not Scraping | Expected metrics are no longer being collected |
+
+Alert rules use configurable evaluation intervals and durations to reduce unnecessary notifications.
+
+### 4.9 Alertmanager Integration
+
+- Centralized alert management.
+- Severity-based alert routing.
+- Warning and critical alert classification.
+- Alert grouping and deduplication.
+- Email notifications.
+- Resolution notifications.
+- Notification receiver configuration.
+- Alert inhibition and suppression.
+- Alert status management.
+
+### 4.10 Application Metrics and History
+
+- Historical container metrics.
+- Resource utilization history.
+- Container health history.
+- Restart records.
+- Incident history.
+- Monitoring data persistence.
+- SQLite-based application data storage.
+
+### 4.11 Container Security Monitoring
+
+DockPilot includes checks for potentially insecure Docker configurations:
+
+- Privileged container configuration.
+- Host network mode.
+- Security profile configuration.
+- Seccomp and AppArmor settings.
+- Host filesystem mounts.
+- Potentially risky container configurations.
+
+### 4.12 Container Failure Prediction
+
+Rule-based container failure prediction using historical resource information:
+
+- CPU threshold analysis.
+- Memory threshold analysis.
+- Resource growth monitoring.
+- Historical metric evaluation.
+- Risk-level classification.
+- Container failure prediction results.
+
+### 4.13 Incident Detection
+
+- Unhealthy container detection.
+- Container availability checks.
+- Resource threshold violations.
+- Restart-related issues.
+- Incident severity classification.
+- Incident history.
+
+### 4.14 Docker Compose Management
+
+- Save Compose configurations.
+- Validate Compose files.
+- Start Compose applications.
+- Inspect configuration issues.
+- Check potentially insecure Compose settings.
+
+---
+
+## 5. Environment Automation
+
+DockPilot provides a reproducible monitoring environment. The installation approach supports Docker Compose and an automated setup option using scripts or Vagrant.
+
+Automation scope:
+
+- Check required dependencies.
+- Configure the monitoring environment.
+- Create or use the monitoring network.
+- Start the monitoring services.
+- Configure Prometheus scrape targets.
+- Load Grafana datasources.
+- Provision Grafana dashboards.
+- Configure alert rules.
+- Configure Alertmanager.
+- Verify service availability.
+- Provide startup, shutdown, restart, and status commands.
+
+The VM-based option uses VirtualBox and Vagrant to provide a consistent all-in-one monitoring environment.
+
+---
+
+## 6. Project Directory Structure
 
 ```text
 DockPilot/
-├── dashboard/
-│   └── index.html                  # Web dashboard (frontend)
 │
-├── manager/                        # FastAPI backend
-│   ├── main.py                     # App entry point & API routes
-│   ├── docker_service.py           # Docker Engine operations
-│   ├── metrics_collector.py        # CPU / memory / network collection
-│   ├── metrics_history.py          # Historical metrics storage
-│   ├── compose_security.py         # Compose validation & risk detection
-│   ├── container_health.py         # Health & restart monitoring
-│   ├── failure_predictor.py        # Predictive failure detection
-│   ├── incident_engine.py          # Incident detection & investigation
-│   ├── incident_recovery.py        # Approved recovery & verification
-│   ├── security_audit_history.py   # Security audit records
-│   └── requirements.txt
+├── manager/
+│   ├── main.py
+│   ├── docker_service.py
+│   ├── metrics_collector.py
+│   ├── metrics_history.py
+│   ├── failure_predictor.py
+│   ├── incident_engine.py
+│   └── compose_security.py
 │
-├── compose_projects/               # Managed Compose projects
-├── prometheus/                     # Prometheus configuration (prometheus.yml)
-├── tests/                          # Automated tests
-├── data/                           # Local SQLite data
-├── monitoring-compose.yaml         # Compose file for Prometheus, cAdvisor, and Node Exporter
-├── check-monitoring.bat            # Windows monitoring health check script
-├── pytest.ini
-└── README.md
+├── data/
+│   └── dockpilot_history.db
+│
+├── prometheus/
+│   ├── prometheus.yml
+│   └── alert_rules.yml
+│
+├── grafana/
+│   └── dashboards/
+│       └── dockpilot-monitoring.json
+│
+├── monitoring-compose.yaml
+├── check-monitoring.bat
+├── README.md
+└── tests/
+    └── test_api.py
+```
+
+Additional installation scripts, Alertmanager configuration, VM configuration, and notification templates form part of the environment setup and distribution structure.
+
+---
+
+## 7. Installation and Setup
+
+### Prerequisites
+
+- Windows, Linux, or a supported VM environment.
+- Docker Desktop or Docker Engine.
+- Docker Compose.
+- Python 3.10 or later.
+- Git.
+- A web browser.
+
+For VM-based installation:
+
+- Oracle VirtualBox.
+- Vagrant.
+
+### Step 1: Clone the Repository
+
+```cmd
+git clone https://github.com/kanishkaramesh60/DockPilot.git
+cd DockPilot
+```
+
+### Step 2: Create a Python Virtual Environment
+
+```cmd
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### Step 3: Start the Monitoring Stack
+
+Check the Docker Compose configuration:
+
+```cmd
+docker compose -f monitoring-compose.yaml config
+```
+
+Start monitoring services:
+
+```cmd
+docker compose -f monitoring-compose.yaml up -d
+```
+
+### Step 4: Verify Monitoring Containers
+
+```cmd
+docker ps
+check-monitoring.bat
+```
+
+### Step 5: Start the DockPilot Backend
+
+Run the FastAPI application from the project root:
+
+```cmd
+uvicorn manager.main:app --host 127.0.0.1 --port 8000
+```
+
+### Step 6: Access the Interfaces
+
+| Service | Local URL |
+|---|---|
+| DockPilot | http://localhost:8000 |
+| Prometheus | http://localhost:9090 |
+| Grafana | http://localhost:3000 |
+| cAdvisor | http://localhost:8085 |
+
+> Grafana credentials depend on the configured environment. Change default credentials before use and keep passwords out of GitHub.
+
+---
+
+## 8. Alert Configuration
+
+| Component | Configuration File |
+|---|---|
+| Prometheus alert rules | `prometheus/alert_rules.yml` |
+| Prometheus configuration | `prometheus/prometheus.yml` |
+| Alertmanager configuration | `alertmanager/alertmanager.yml` |
+
+### Example PromQL Expressions
+
+**CPU Usage**
+
+```promql
+100 - (avg by (instance) (
+  rate(node_cpu_seconds_total{mode="idle"}[1m])
+) * 100)
+```
+
+**Memory Usage**
+
+```promql
+(1 - (
+  node_memory_MemAvailable_bytes /
+  node_memory_MemTotal_bytes
+)) * 100
+```
+
+**Available Disk Space**
+
+```promql
+(
+  node_filesystem_avail_bytes /
+  node_filesystem_size_bytes
+) * 100
+```
+
+**Monitoring Target Status**
+
+```promql
+up
 ```
 
 ---
 
-## 📈 Monitoring Infrastructure (Prometheus, cAdvisor, Node Exporter)
+## 9. Testing and Validation
 
-DockPilot features a dedicated DevOps monitoring infrastructure orchestrated via Docker Compose (`monitoring-compose.yaml`). This stack provides real-time container metrics, host environment telemetry, and time-series data storage.
+DockPilot uses application-level and monitoring-level validation.
 
-### 🏛️ Monitoring Architecture
+Testing scope:
 
-```mermaid
-flowchart TB
-    subgraph Host["Host Operating System (Windows / Docker Desktop Linux VM)"]
-        NE["📊 Node Exporter<br/>dockpilot-node-exporter<br/>Port :9100 (Internal)"]
-        CA["📈 cAdvisor<br/>dockpilot-cadvisor<br/>Port 8085 -> :8080"]
-        Containers["🐳 Managed Containers / Host Resources"]
-    end
+- Backend API testing.
+- Docker container operation testing.
+- Metrics endpoint validation.
+- Prometheus target health checks.
+- Prometheus alert rule validation.
+- PromQL query validation.
+- Grafana datasource validation.
+- Dashboard provisioning validation.
+- Alertmanager routing validation.
+- Email notification testing.
+- Alert resolution testing.
+- Installation and restart testing.
+- Historical metrics persistence testing.
 
-    subgraph Monitoring["Docker Network: dockpilot-monitoring"]
-        PROM["🔥 Prometheus TSDB<br/>dockpilot-prometheus<br/>Port 9090 -> :9090"]
-        VOL[("💾 Persistent Volume<br/>dockpilot_prometheus_data")]
-    end
-
-    Containers -->|Container Stats & Cgroups| CA
-    Host -->|Kernel /proc & /sys & rootfs| NE
-    PROM -->|Scrape :8080/metrics (10s)| CA
-    PROM -->|Scrape :9100/metrics (10s)| NE
-    PROM -->|Scrape :9090/metrics (10s)| PROM
-    PROM -->|Store Metrics (3d TSDB)| VOL
-```
-
-### 🔌 Services and Ports
-
-| Service | Container Name | Image | Published Host Port | Internal Network Port | Description |
-|---|---|---|---|---|---|
-| **Prometheus** | `dockpilot-prometheus` | `prom/prometheus:latest` | `9090` | `9090` | Time-series database, metrics scraper, and query engine. Scrapes all targets every 10s. |
-| **cAdvisor** | `dockpilot-cadvisor` | `gcr.io/cadvisor/cadvisor:latest` | `8085` | `8080` | Real-time container resource, CPU, memory, and network usage analyzer. |
-| **Node Exporter** | `dockpilot-node-exporter` | `prom/node-exporter:latest` | *None (Internal only)* | `9100` | Hardware and OS metrics exporter. Scraped internally on `dockpilot-monitoring` to avoid host port conflicts. |
-
-> [!NOTE]
-> **Host Port Conflict Prevention:** Node Exporter does not bind to a host port. Its metrics endpoint (`:9100`) is exposed exclusively on the internal `dockpilot-monitoring` network for Prometheus. This prevents port conflicts with any services or exporters running on the Windows host.
-
-### ⚠️ Node Exporter Docker Desktop / Linux Monitoring Limitation
-
-> [!IMPORTANT]
-> **Scope of Monitored Environment:**
-> When running Docker Desktop on Windows, Docker operates inside a virtualized Linux utility environment (via WSL 2 or Hyper-V).
-> - Node Exporter mounts `/proc:/host/proc:ro`, `/sys:/host/sys:ro`, and `/:/rootfs:ro` from this virtualized Linux environment.
-> - Consequently, **Node Exporter collects telemetry for the Docker Desktop Linux guest environment** (CPU cores assigned to WSL2/Hyper-V, Linux memory allocations, virtual disk I/O, and Linux system load).
-> - **It does not monitor native Windows host OS processes, native Windows services, or Windows registry/hardware counters.**
-> - To monitor native Windows host resources outside Docker Desktop, a native Windows exporter (such as Prometheus `windows_exporter` / `WMI exporter`) must be installed and run as a Windows service on the host.
-
-### 📋 Prerequisites
-
-- **Docker Desktop** (version 20.10+ / 24+ / 29+) with WSL 2 or Hyper-V backend running.
-- **Docker Compose** (v2.x or v5.x+).
-- **Windows Command Prompt (cmd.exe)** or **PowerShell** with `curl` available.
-- Ports `9090` (Prometheus) and `8085` (cAdvisor) free on the host.
-
-### 📦 Installation & Setup
-
-1. **Verify Docker Desktop is running:**
-   ```cmd
-   docker info
-   ```
-2. **Ensure network and persistent volume readiness:**
-   The network `dockpilot-monitoring` and TSDB volume `dockpilot_prometheus_data` are automatically managed by Docker Compose.
-
-### 🚀 Startup Commands
-
-To start the monitoring infrastructure:
+Run backend tests:
 
 ```cmd
-cd /d D:\CyberProjects\dockpilot
-docker compose -f monitoring-compose.yaml config
-docker compose -f monitoring-compose.yaml up -d
-docker ps
+pytest -v
 ```
 
-### ✅ Verification Steps
-
-#### 1. Automated Health Check Script
-Run the automated Windows health check script from the project root:
+Run monitoring checks:
 
 ```cmd
 check-monitoring.bat
 ```
 
-This script verifies:
-- Docker daemon connectivity.
-- Running status and health for `dockpilot-prometheus`, `dockpilot-cadvisor`, and `dockpilot-node-exporter`.
-- Prometheus server readiness (`http://localhost:9090/-/healthy`).
-- Prometheus target health for `prometheus`, `cadvisor`, and `node-exporter` (all expected `UP`).
-- Node Exporter internal metric availability and Prometheus scraping of `node_cpu_seconds_total` and `node_memory_MemAvailable_bytes`.
-- cAdvisor dashboard access (`http://localhost:8085`) and `container_cpu_usage_seconds_total` scraping.
+---
 
-#### 2. Prometheus Targets UI
-Open your browser to:
-[http://localhost:9090/targets](http://localhost:9090/targets)
+## 10. Security Considerations
 
-Expected active targets:
-- `prometheus` – **UP** (`http://prometheus:9090/metrics`)
-- `cadvisor` – **UP** (`http://cadvisor:8080/metrics`)
-- `node-exporter` – **UP** (`http://node-exporter:9100/metrics`)
-
-#### 3. Prometheus Metric Queries
-Navigate to [http://localhost:9090/graph](http://localhost:9090/graph) and test the following PromQL queries:
-
-- **Node Exporter CPU metrics:**
-  ```promql
-  node_cpu_seconds_total
-  ```
-- **Node Exporter Available Memory:**
-  ```promql
-  node_memory_MemAvailable_bytes
-  ```
-- **cAdvisor Container CPU Usage:**
-  ```promql
-  container_cpu_usage_seconds_total
-  ```
-
-#### 4. cAdvisor Web Dashboard
-Navigate to:
-[http://localhost:8085](http://localhost:8085) or [http://localhost:8085/containers/](http://localhost:8085/containers/)
-to inspect real-time container metrics, subcontainers, and driver details.
-
-### 🔧 Troubleshooting
-
-| Issue | Cause | Resolution |
-|---|---|---|
-| **Port Conflict on 9090 or 8085** | Another process is using port 9090 or 8085 on the host. | Run `netstat -ano \| findstr :9090` to find the offending PID, or adjust the host port mapping in `monitoring-compose.yaml`. |
-| **`node-exporter` Target DOWN in Prometheus** | DNS or network resolution issue between containers. | Verify both containers are attached to `dockpilot-monitoring` via `docker network inspect dockpilot-monitoring`. Check container logs with `docker logs dockpilot-node-exporter`. |
-| **Compose Volume Loss Concern** | Accidental volume pruning. | Never run `docker compose down -v`. The TSDB volume `dockpilot_prometheus_data` is preserved across container restarts and updates. |
-| **Container Fails with Mount Error** | Docker Desktop file sharing permissions. | Ensure Docker Desktop has permission to access host drives and that WSL 2 integration is enabled. |
+- Bind local services to localhost when external access is unnecessary.
+- Do not expose Docker Engine APIs publicly.
+- Avoid privileged containers unless explicitly required.
+- Review host filesystem mounts.
+- Use secure container configurations.
+- Protect Grafana credentials.
+- Store notification credentials outside source control.
+- Restrict access to monitoring interfaces.
+- Avoid committing environment files containing secrets.
 
 ---
 
-## 🚀 Quick Start
+## 11. Expected Project Deliverables
 
-### Prerequisites
+1. DockPilot Docker management dashboard.
+2. Docker-based monitoring environment.
+3. Prometheus configuration and metric collection.
+4. Node Exporter and cAdvisor integration.
+5. Preconfigured Grafana dashboards.
+6. Prometheus alert rule configuration.
+7. Alertmanager notification and routing configuration.
+8. Automated installation scripts or Vagrantfile.
+9. Startup, shutdown, and health-check procedures.
+10. Installation and configuration documentation.
+11. GitHub source repository.
+12. Testing results and screenshots.
+13. Project demonstration.
 
-- **Python 3.10+**
-- **Docker Desktop** or **Docker Engine** (running)
-- **Git**
-- Windows, Linux, or macOS
+---
 
-### Installation
+## 12. Future Scope
 
-**1. Clone the repository**
+- Advanced incident correlation.
+- Explainable root-cause analysis.
+- Machine-learning-based failure prediction.
+- Human-approved container recovery.
+- Advanced security analytics.
+- Multi-host Docker monitoring.
 
-```bash
-git clone https://github.com/kanishkaramesh60/DockPilot.git
-cd DockPilot
-```
+---
 
-**2. Create and activate a virtual environment**
+## 13. Project Information
 
-```bash
-python -m venv venv
-```
-
-| OS | Activation command |
+| | |
 |---|---|
-| Windows (CMD) | `venv\Scripts\activate` |
-| Linux / macOS | `source venv/bin/activate` |
-
-**3. Install dependencies**
-
-```bash
-pip install -r manager/requirements.txt
-```
-
-**4. Make sure Docker is running**
-
-Docker Desktop or Docker Engine must be running and accessible to the application.
-
-**5. Start the backend**
-
-```bash
-cd manager
-python -m uvicorn main:app --reload --host 127.0.0.1 --port 8001
-```
-
-**6. Open DockPilot**
-
-| | URL |
-|---|---|
-| 🖥️ Dashboard | http://127.0.0.1:8001 |
-| 📖 API Docs (Swagger) | http://127.0.0.1:8001/docs |
+| **Project Name** | DockPilot |
+| **Project Domain** | DevOps Monitoring, Docker Management and Container Security |
+| **Project Type** | Local DevOps Monitoring Sandbox |
+| **Primary Technologies** | Docker, Prometheus, Grafana, cAdvisor, Node Exporter and Alertmanager |
+| **Repository** | https://github.com/kanishkaramesh60/DockPilot |
+| **Deployment Model** | Local environment / All-in-One VM |
 
 ---
 
-## 📖 API Documentation
+## 14. Conclusion
 
-DockPilot is built on FastAPI, so interactive API documentation is generated automatically.
+DockPilot brings Docker container management, infrastructure monitoring, metric visualization, and alert notification into one centralized local environment.
 
-Once the server is running, visit:
+By integrating Docker Engine with Prometheus, Grafana, exporters, and Alertmanager, the platform provides visibility into system performance, container health, and infrastructure availability.
 
-- **Swagger UI:** `http://127.0.0.1:8001/docs`
-
----
-
-## 🧪 Testing
-
-DockPilot includes automated tests for its key components. From the project root:
-
-```bash
-python -m pytest -v
-```
-
----
-
-## 🔐 Security Considerations
-
-> [!WARNING]
-> Exposing the Docker API without authentication gives an attacker full control of the host. Never expose it publicly.
-
-- ✅ Validate Docker Compose configurations before deployment
-- ✅ Avoid privileged containers unless explicitly required
-- ✅ Restrict host networking and sensitive volume mounts
-- ✅ Protect Docker Engine access with authenticated, encrypted connections
-- ❌ Do not expose an unauthenticated Docker API publicly
-- ❌ Keep credentials and environment variables out of source control
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Secure remote Docker Engine integration
-- [ ] Multi-host Docker environment management
-- [ ] Role-based access control (RBAC)
-- [ ] Advanced anomaly detection
-- [ ] Enhanced container security analytics
-- [ ] Persistent cloud-based monitoring history
-- [ ] Advanced incident investigation and automated verification
-
----
-
-## 🎯 Project Objective
-
-DockPilot aims to provide a centralized platform that combines container management, resource monitoring, predictive failure detection, security auditing, and guided incident recovery.
-
-By pairing operational visibility with security-focused capabilities and human-approved recovery workflows, it makes container management **more efficient, more reliable, and more secure**.
-
----
-
-## 👤 Author
-
-**Kanishka R**
-GitHub: [@kanishkaramesh60](https://github.com/kanishkaramesh60)
-
-*Developed as a Cybersecurity and Cloud-Native Container Management project.*
-
----
-
-<div align="center">
-
-⭐ **If you find DockPilot useful, please consider starring the repository!** ⭐
-
-</div>
+The project demonstrates practical DevOps monitoring concepts, infrastructure automation, container management, observability, and alerting in a reproducible local environment.

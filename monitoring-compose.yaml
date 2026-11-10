@@ -6,12 +6,16 @@ services:
     container_name: dockpilot-prometheus
     ports:
       - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
       - dockpilot_prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time=3d"
+      - "--web.enable-lifecycle"
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
       interval: 15s
@@ -64,8 +68,35 @@ services:
     networks:
       - dockpilot-monitoring
 
+  grafana:
+    image: grafana/grafana:latest
+    container_name: dockpilot-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - dockpilot_grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - dockpilot-monitoring
+
 volumes:
   dockpilot_prometheus_data:
+  dockpilot_grafana_data:
 
 networks:
   dockpilot-monitoring:

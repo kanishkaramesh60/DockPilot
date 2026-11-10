@@ -7,7 +7,7 @@ from pathlib import Path
 from time import monotonic
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 from docker.errors import DockerException, NotFound, APIError
 
@@ -33,6 +33,7 @@ from docker_service import (
 )
 
 from container_health import (
+    _inspect_containers,
     check_containers,
     get_recent_health_events,
 )
@@ -529,6 +530,34 @@ def home():
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+def metrics():
+    """
+    Prometheus metrics endpoint exposing real-time container health and monitoring telemetry.
+    """
+    lines = [
+        "# HELP dockpilot_container_health_status Health status of Docker containers (1=healthy, 0=unhealthy, -1=no healthcheck)",
+        "# TYPE dockpilot_container_health_status gauge"
+    ]
+    try:
+        containers = _inspect_containers()
+        for c in containers:
+            c_name = c.get("name", "")
+            c_id = c.get("id", "")
+            health_str = c.get("health", "not_configured")
+            if health_str == "healthy":
+                val = 1
+            elif health_str == "unhealthy":
+                val = 0
+            else:
+                val = -1
+            lines.append(f'dockpilot_container_health_status{{container_name="{c_name}",container_id="{c_id}",health="{health_str}"}} {val}')
+    except Exception as exc:
+        lines.append(f"# Error collecting container health metrics: {exc}")
+    lines.append("")
+    return "\n".join(lines)
 
 
 # --------------------------------------------------

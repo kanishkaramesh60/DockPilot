@@ -1,0 +1,105 @@
+groups:
+  - name: dockpilot_infrastructure_alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High host CPU utilization on {{ $labels.instance }}"
+          description: "Host CPU utilization on instance {{ $labels.instance }} has exceeded 85% (current value: {{ $value | printf \"%.2f\" }}%) for more than 2 minutes."
+
+      - alert: CriticalCPUUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 95
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical host CPU utilization on {{ $labels.instance }}"
+          description: "Host CPU utilization on instance {{ $labels.instance }} has exceeded 95% (current value: {{ $value | printf \"%.2f\" }}%) for more than 1 minute."
+
+      - alert: HighMemoryUsage
+        expr: ((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100) > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High host memory utilization on {{ $labels.instance }}"
+          description: "Host memory utilization on instance {{ $labels.instance }} has exceeded 85% (current value: {{ $value | printf \"%.2f\" }}%) for more than 2 minutes."
+
+      - alert: CriticalMemoryUsage
+        expr: ((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100) > 95
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical host memory utilization on {{ $labels.instance }}"
+          description: "Host memory utilization on instance {{ $labels.instance }} has exceeded 95% (current value: {{ $value | printf \"%.2f\" }}%) for more than 1 minute."
+
+      - alert: LowDiskSpace
+        expr: ((node_filesystem_avail_bytes{fstype!~"tmpfs|rootfs|ramfs", mountpoint=~"/var/lib|/mnt/host/[cd]"} / node_filesystem_size_bytes{fstype!~"tmpfs|rootfs|ramfs", mountpoint=~"/var/lib|/mnt/host/[cd]"}) * 100) < 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low filesystem space on {{ $labels.mountpoint }} ({{ $labels.instance }})"
+          description: "Filesystem {{ $labels.mountpoint }} on instance {{ $labels.instance }} has less than 10% available space (current value: {{ $value | printf \"%.2f\" }}%) for more than 2 minutes."
+
+      - alert: CriticalDiskSpace
+        expr: ((node_filesystem_avail_bytes{fstype!~"tmpfs|rootfs|ramfs", mountpoint=~"/var/lib|/mnt/host/[cd]"} / node_filesystem_size_bytes{fstype!~"tmpfs|rootfs|ramfs", mountpoint=~"/var/lib|/mnt/host/[cd]"}) * 100) < 5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical filesystem space on {{ $labels.mountpoint }} ({{ $labels.instance }})"
+          description: "Filesystem {{ $labels.mountpoint }} on instance {{ $labels.instance }} has less than 5% available space (current value: {{ $value | printf \"%.2f\" }}%) for more than 1 minute."
+
+  - name: dockpilot_container_alerts
+    rules:
+      - alert: ContainerHighCPU
+        expr: sum by (name, instance) (rate(container_cpu_usage_seconds_total{name!=""}[1m])) * 100 > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU utilization in container {{ $labels.name }}"
+          description: "Docker container {{ $labels.name }} on {{ $labels.instance }} CPU utilization has exceeded 85% (current value: {{ $value | printf \"%.2f\" }}%) for more than 2 minutes."
+
+      - alert: ContainerHighMemory
+        expr: ((container_memory_usage_bytes{name!~"^$|/"} / (container_spec_memory_limit_bytes > 0)) * 100 > 85) or ((container_memory_usage_bytes{name!~"^$|/"} / on() group_left() node_memory_MemTotal_bytes) * 100 > 85)
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory utilization in container {{ $labels.name }}"
+          description: "Docker container {{ $labels.name }} memory utilization has exceeded 85% of its allocated limit/host memory (current value: {{ $value | printf \"%.2f\" }}%) for more than 2 minutes."
+
+      - alert: ContainerUnhealthy
+        expr: dockpilot_container_health_status == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.container_name }} is unhealthy"
+          description: "Docker container {{ $labels.container_name }} (ID: {{ $labels.container_id }}) health check status is reported UNHEALTHY."
+
+  - name: dockpilot_monitoring_alerts
+    rules:
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Monitoring target {{ $labels.job }} is DOWN"
+          description: "Prometheus scrape target {{ $labels.job }} on {{ $labels.instance }} has been unreachable for more than 1 minute."
+
+      - alert: PrometheusNotScraping
+        expr: scrape_samples_scraped == 0 or absent(up{job="prometheus"}) == 1 or absent(up{job="cadvisor"}) == 1 or absent(up{job="node-exporter"}) == 1 or absent(up{job="grafana"}) == 1 or absent(up{job="dockpilot"}) == 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus is not scraping samples or missing targets"
+          description: "Prometheus target {{ $labels.job }} on {{ $labels.instance }} has 0 scraped samples or an essential scrape target is absent."
