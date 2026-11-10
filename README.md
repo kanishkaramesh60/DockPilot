@@ -397,7 +397,7 @@ uvicorn manager.main:app --host 127.0.0.1 --port 8001
 
 | Service | Local URL |
 |---|---|
-| DockPilot | http://localhost:8000 |
+| DockPilot | http://localhost:8001 |
 | Prometheus | http://localhost:9090 |
 | Grafana | http://localhost:3000 |
 | cAdvisor | http://localhost:8085 |
