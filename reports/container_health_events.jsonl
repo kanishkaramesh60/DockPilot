@@ -120,3 +120,6 @@
 {"timestamp": "2026-10-30T04:38:40+00:00", "type": "health_alert", "container_id": "31670f4309ea", "container_name": "dockpilot-chaos-test", "status": "stopped", "reason": "Container state is exited."}
 {"timestamp": "2026-11-01T07:13:55+00:00", "type": "health_alert", "container_id": "cb40d18ad72b", "container_name": "dockpilot-incident-test", "status": "unhealthy", "reason": "Docker health check reports unhealthy."}
 {"timestamp": "2026-11-01T07:19:33+00:00", "type": "health_alert", "container_id": "118ebfb9598c", "container_name": "dockpilot-incident-test1", "status": "unhealthy", "reason": "Docker health check reports unhealthy."}
+{"timestamp": "2026-11-02T06:25:50+00:00", "type": "health_recovered", "container_id": "6153cfb44118", "container_name": "dockpilot-demo-web-1", "previous_status": "stopped", "status": "running_no_healthcheck", "confirmed_healthy": false}
+{"timestamp": "2026-11-02T07:34:03+00:00", "type": "health_alert", "container_id": "118ebfb9598c", "container_name": "dockpilot-incident-test1", "status": "stopped", "reason": "Container state is exited."}
+{"timestamp": "2026-11-02T08:23:43+00:00", "type": "health_alert", "container_id": "118ebfb9598c", "container_name": "dockpilot-incident-test1", "status": "unhealthy", "reason": "Docker health check reports unhealthy."}

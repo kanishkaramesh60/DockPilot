@@ -34,6 +34,7 @@ Instead of juggling the CLI, separate monitoring tools, and manual security revi
 - [Incident Workflow](#-incident-intelligence--guided-recovery)
 - [Tech Stack](#️-tech-stack)
 - [Architecture](#️-architecture)
+- [Monitoring Infrastructure](#-monitoring-infrastructure-prometheus-cadvisor-node-exporter)
 - [Quick Start](#-quick-start)
 - [API Documentation](#-api-documentation)
 - [Testing](#-testing)
@@ -137,6 +138,7 @@ flowchart LR
 | **Frontend** | HTML, CSS, JavaScript |
 | **Container Management** | Docker Engine, Docker SDK for Python |
 | **System Monitoring** | psutil |
+| **DevOps Monitoring** | Prometheus, cAdvisor, Node Exporter |
 | **Config Validation** | PyYAML |
 | **Database** | SQLite |
 | **Visualization** | JavaScript Charts |
@@ -189,13 +191,147 @@ DockPilot/
 │   └── requirements.txt
 │
 ├── compose_projects/               # Managed Compose projects
-├── prometheus/                     # Monitoring configuration
+├── prometheus/                     # Prometheus configuration (prometheus.yml)
 ├── tests/                          # Automated tests
 ├── data/                           # Local SQLite data
-├── monitoring-compose.yaml
+├── monitoring-compose.yaml         # Compose file for Prometheus, cAdvisor, and Node Exporter
+├── check-monitoring.bat            # Windows monitoring health check script
 ├── pytest.ini
 └── README.md
 ```
+
+---
+
+## 📈 Monitoring Infrastructure (Prometheus, cAdvisor, Node Exporter)
+
+DockPilot features a dedicated DevOps monitoring infrastructure orchestrated via Docker Compose (`monitoring-compose.yaml`). This stack provides real-time container metrics, host environment telemetry, and time-series data storage.
+
+### 🏛️ Monitoring Architecture
+
+```mermaid
+flowchart TB
+    subgraph Host["Host Operating System (Windows / Docker Desktop Linux VM)"]
+        NE["📊 Node Exporter<br/>dockpilot-node-exporter<br/>Port :9100 (Internal)"]
+        CA["📈 cAdvisor<br/>dockpilot-cadvisor<br/>Port 8085 -> :8080"]
+        Containers["🐳 Managed Containers / Host Resources"]
+    end
+
+    subgraph Monitoring["Docker Network: dockpilot-monitoring"]
+        PROM["🔥 Prometheus TSDB<br/>dockpilot-prometheus<br/>Port 9090 -> :9090"]
+        VOL[("💾 Persistent Volume<br/>dockpilot_prometheus_data")]
+    end
+
+    Containers -->|Container Stats & Cgroups| CA
+    Host -->|Kernel /proc & /sys & rootfs| NE
+    PROM -->|Scrape :8080/metrics (10s)| CA
+    PROM -->|Scrape :9100/metrics (10s)| NE
+    PROM -->|Scrape :9090/metrics (10s)| PROM
+    PROM -->|Store Metrics (3d TSDB)| VOL
+```
+
+### 🔌 Services and Ports
+
+| Service | Container Name | Image | Published Host Port | Internal Network Port | Description |
+|---|---|---|---|---|---|
+| **Prometheus** | `dockpilot-prometheus` | `prom/prometheus:latest` | `9090` | `9090` | Time-series database, metrics scraper, and query engine. Scrapes all targets every 10s. |
+| **cAdvisor** | `dockpilot-cadvisor` | `gcr.io/cadvisor/cadvisor:latest` | `8085` | `8080` | Real-time container resource, CPU, memory, and network usage analyzer. |
+| **Node Exporter** | `dockpilot-node-exporter` | `prom/node-exporter:latest` | *None (Internal only)* | `9100` | Hardware and OS metrics exporter. Scraped internally on `dockpilot-monitoring` to avoid host port conflicts. |
+
+> [!NOTE]
+> **Host Port Conflict Prevention:** Node Exporter does not bind to a host port. Its metrics endpoint (`:9100`) is exposed exclusively on the internal `dockpilot-monitoring` network for Prometheus. This prevents port conflicts with any services or exporters running on the Windows host.
+
+### ⚠️ Node Exporter Docker Desktop / Linux Monitoring Limitation
+
+> [!IMPORTANT]
+> **Scope of Monitored Environment:**
+> When running Docker Desktop on Windows, Docker operates inside a virtualized Linux utility environment (via WSL 2 or Hyper-V).
+> - Node Exporter mounts `/proc:/host/proc:ro`, `/sys:/host/sys:ro`, and `/:/rootfs:ro` from this virtualized Linux environment.
+> - Consequently, **Node Exporter collects telemetry for the Docker Desktop Linux guest environment** (CPU cores assigned to WSL2/Hyper-V, Linux memory allocations, virtual disk I/O, and Linux system load).
+> - **It does not monitor native Windows host OS processes, native Windows services, or Windows registry/hardware counters.**
+> - To monitor native Windows host resources outside Docker Desktop, a native Windows exporter (such as Prometheus `windows_exporter` / `WMI exporter`) must be installed and run as a Windows service on the host.
+
+### 📋 Prerequisites
+
+- **Docker Desktop** (version 20.10+ / 24+ / 29+) with WSL 2 or Hyper-V backend running.
+- **Docker Compose** (v2.x or v5.x+).
+- **Windows Command Prompt (cmd.exe)** or **PowerShell** with `curl` available.
+- Ports `9090` (Prometheus) and `8085` (cAdvisor) free on the host.
+
+### 📦 Installation & Setup
+
+1. **Verify Docker Desktop is running:**
+   ```cmd
+   docker info
+   ```
+2. **Ensure network and persistent volume readiness:**
+   The network `dockpilot-monitoring` and TSDB volume `dockpilot_prometheus_data` are automatically managed by Docker Compose.
+
+### 🚀 Startup Commands
+
+To start the monitoring infrastructure:
+
+```cmd
+cd /d D:\CyberProjects\dockpilot
+docker compose -f monitoring-compose.yaml config
+docker compose -f monitoring-compose.yaml up -d
+docker ps
+```
+
+### ✅ Verification Steps
+
+#### 1. Automated Health Check Script
+Run the automated Windows health check script from the project root:
+
+```cmd
+check-monitoring.bat
+```
+
+This script verifies:
+- Docker daemon connectivity.
+- Running status and health for `dockpilot-prometheus`, `dockpilot-cadvisor`, and `dockpilot-node-exporter`.
+- Prometheus server readiness (`http://localhost:9090/-/healthy`).
+- Prometheus target health for `prometheus`, `cadvisor`, and `node-exporter` (all expected `UP`).
+- Node Exporter internal metric availability and Prometheus scraping of `node_cpu_seconds_total` and `node_memory_MemAvailable_bytes`.
+- cAdvisor dashboard access (`http://localhost:8085`) and `container_cpu_usage_seconds_total` scraping.
+
+#### 2. Prometheus Targets UI
+Open your browser to:
+[http://localhost:9090/targets](http://localhost:9090/targets)
+
+Expected active targets:
+- `prometheus` – **UP** (`http://prometheus:9090/metrics`)
+- `cadvisor` – **UP** (`http://cadvisor:8080/metrics`)
+- `node-exporter` – **UP** (`http://node-exporter:9100/metrics`)
+
+#### 3. Prometheus Metric Queries
+Navigate to [http://localhost:9090/graph](http://localhost:9090/graph) and test the following PromQL queries:
+
+- **Node Exporter CPU metrics:**
+  ```promql
+  node_cpu_seconds_total
+  ```
+- **Node Exporter Available Memory:**
+  ```promql
+  node_memory_MemAvailable_bytes
+  ```
+- **cAdvisor Container CPU Usage:**
+  ```promql
+  container_cpu_usage_seconds_total
+  ```
+
+#### 4. cAdvisor Web Dashboard
+Navigate to:
+[http://localhost:8085](http://localhost:8085) or [http://localhost:8085/containers/](http://localhost:8085/containers/)
+to inspect real-time container metrics, subcontainers, and driver details.
+
+### 🔧 Troubleshooting
+
+| Issue | Cause | Resolution |
+|---|---|---|
+| **Port Conflict on 9090 or 8085** | Another process is using port 9090 or 8085 on the host. | Run `netstat -ano \| findstr :9090` to find the offending PID, or adjust the host port mapping in `monitoring-compose.yaml`. |
+| **`node-exporter` Target DOWN in Prometheus** | DNS or network resolution issue between containers. | Verify both containers are attached to `dockpilot-monitoring` via `docker network inspect dockpilot-monitoring`. Check container logs with `docker logs dockpilot-node-exporter`. |
+| **Compose Volume Loss Concern** | Accidental volume pruning. | Never run `docker compose down -v`. The TSDB volume `dockpilot_prometheus_data` is preserved across container restarts and updates. |
+| **Container Fails with Mount Error** | Docker Desktop file sharing permissions. | Ensure Docker Desktop has permission to access host drives and that WSL 2 integration is enabled. |
 
 ---
 

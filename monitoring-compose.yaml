@@ -1,3 +1,4 @@
+name: dockpilot
 
 services:
   prometheus:
@@ -11,6 +12,12 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time=3d"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
     networks:
       - dockpilot-monitoring
@@ -30,6 +37,30 @@ services:
     privileged: true
     devices:
       - /dev/kmsg
+    networks:
+      - dockpilot-monitoring
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: dockpilot-node-exporter
+    expose:
+      - "9100"
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9100/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
     networks:
       - dockpilot-monitoring
 
