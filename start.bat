@@ -26,12 +26,18 @@ echo   [PASS] Docker daemon is active.
 
 REM 2. Check Virtual Environment
 echo [2/4] Verifying Python virtual environment...
-if not exist "venv\Scripts\python.exe" (
+set "PYTHON_EXE="
+if exist "%PROJECT_ROOT%.venv\Scripts\python.exe" (
+    set "PYTHON_EXE=%PROJECT_ROOT%.venv\Scripts\python.exe"
+    echo   [PASS] Using virtual environment: .venv
+) else if exist "%PROJECT_ROOT%venv\Scripts\python.exe" (
+    set "PYTHON_EXE=%PROJECT_ROOT%venv\Scripts\python.exe"
+    echo   [PASS] Using virtual environment: venv
+) else (
     echo   [WARN] Virtual environment not found. Running install.bat to initialize...
     call "install.bat"
     exit /b %errorlevel%
 )
-echo   [PASS] Python environment verified.
 
 REM 3. Start Docker Monitoring Infrastructure
 echo [3/4] Starting monitoring containers via Docker Compose...
@@ -52,7 +58,7 @@ for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr :8001 ^| findstr LISTE
 
 if !BACKEND_RUNNING! equ 0 (
     echo   Launching DockPilot server in background...
-    start "DockPilot Backend" /min "%PROJECT_ROOT%venv\Scripts\python.exe" -m uvicorn main:app --app-dir "%PROJECT_ROOT%manager" --host 0.0.0.0 --port 8001
+    start "DockPilot Backend" /min "!PYTHON_EXE!" -m uvicorn main:app --app-dir "%PROJECT_ROOT%manager" --host 0.0.0.0 --port 8001
     
     set WAIT_COUNT=0
     :WAIT_LOOP

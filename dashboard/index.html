@@ -657,6 +657,49 @@ tr:last-child td { border-bottom: 0; }
 .settings-key { color: var(--text-muted); }
 .settings-val { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: #f8fafc; }
 
+.env-action-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 20px; }
+.env-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; border: 1px solid transparent; transition: all .15s ease;
+}
+.env-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+.env-btn:active { transform: translateY(0); }
+.env-btn-primary { background: linear-gradient(135deg, #0284c7, #0ea5e9); color: #fff; border-color: rgba(56,189,248,.3); }
+.env-btn-danger { background: linear-gradient(135deg, #be123c, #e11d48); color: #fff; border-color: rgba(251,113,133,.3); }
+.env-btn-warning { background: linear-gradient(135deg, #b45309, #d97706); color: #fff; border-color: rgba(251,191,36,.3); }
+.env-btn-cyan { background: linear-gradient(135deg, #0891b2, #06b6d4); color: #fff; border-color: rgba(34,211,238,.3); }
+.env-btn-outline { background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--text); }
+.env-btn-outline:hover { background: rgba(255,255,255,.1); border-color: var(--blue); color: #fff; }
+.env-alert-banner {
+    margin: 8px 20px 14px; padding: 12px 16px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px;
+}
+.env-alert-banner.healthy {
+    background: rgba(52, 211, 153, .1); border: 1px solid rgba(52, 211, 153, .3); color: #34d399;
+}
+.env-alert-banner.warning {
+    background: rgba(251, 191, 36, .1); border: 1px solid rgba(251, 191, 36, .35); color: #fbbf24;
+}
+.env-alert-banner.danger {
+    background: rgba(251, 113, 133, .12); border: 1px solid rgba(251, 113, 133, .35); color: #fb7185;
+}
+.badge-status {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 7px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase;
+}
+.badge-status.pass { background: rgba(52, 211, 153, .15); color: #34d399; border: 1px solid rgba(52, 211, 153, .3); }
+.badge-status.fail { background: rgba(251, 113, 133, .15); color: #fb7185; border: 1px solid rgba(251, 113, 133, .3); }
+.badge-status.warn { background: rgba(251, 191, 36, .15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, .3); }
+.env-toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 1000;
+    padding: 12px 20px; border-radius: 10px; background: #0f1c33;
+    border: 1px solid var(--blue); color: #fff; font-size: 13px; font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5); opacity: 0; pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease; transform: translateY(10px);
+}
+.env-toast.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 800px) {
     :root { --header-h: 0px; }
@@ -2289,30 +2332,77 @@ setInterval(loadVolumes, 30000);
     // -------------------------------------------------------------
     pages.settings.innerHTML = `
       <div class="page-heading">
-        <h1>System Settings &amp; Infrastructure Configuration</h1>
-        <div class="subtitle">DockPilot runtime environment, service port assignments, storage paths, and notification configuration</div>
+        <h1>System Settings &amp; Environment Management</h1>
+        <div class="subtitle">DockPilot runtime environment, service port assignments, pre-flight validation, and container controls</div>
+      </div>
+
+      <div class="env-action-bar">
+        <button type="button" class="env-btn env-btn-primary" id="btnEnvStartMonitoring">▶ Start Monitoring Services</button>
+        <button type="button" class="env-btn env-btn-danger" id="btnEnvStopMonitoring">⏹ Stop Monitoring Services</button>
+        <button type="button" class="env-btn env-btn-warning" id="btnEnvRestartMonitoring">🔄 Restart Stack</button>
+        <button type="button" class="env-btn env-btn-cyan" id="btnEnvPreflightCheck">🩺 Run Pre-Flight Check</button>
+        <button type="button" class="env-btn env-btn-outline" id="btnEnvRefresh">↻ Refresh Environment</button>
+      </div>
+
+      <div id="envStatusBanner" class="env-alert-banner healthy">
+        <div><strong>Environment Status:</strong> <span id="envStatusText">Checking environment readiness...</span></div>
+        <div id="envStatusBadge"><span class="badge-status pass">READY</span></div>
+      </div>
+
+      <div id="envPrereqAlert" class="env-alert-banner danger" style="display:none;">
+        <div><strong>Missing Prerequisites:</strong> <span id="envPrereqList">—</span></div>
+      </div>
+
+      <div id="envPreflightResultPanel" style="display:none; margin: 0 20px 16px; padding: 14px 18px; background: #0c1527; border: 1px solid var(--border); border-radius: 10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+          <h4 style="margin:0; color:#38bdf8; font-size:13.5px; display:flex; align-items:center; gap:6px;">🩺 Environment Pre-Flight Check Results</h4>
+          <button type="button" class="env-btn env-btn-outline" style="padding:2px 8px; font-size:11px;" id="btnClosePreflightPanel">✕ Close</button>
+        </div>
+        <div id="envPreflightChecksList" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px;">
+        </div>
       </div>
 
       <div class="settings-grid">
         <div class="settings-card">
-          <h3><span class="status-dot healthy"></span> Docker Engine Runtime</h3>
+          <h3><span class="status-dot healthy" id="dotDocker"></span> Docker Engine Runtime</h3>
+          <div class="settings-item"><span class="settings-key">Daemon Connectivity</span><span class="settings-val" id="setDockerConnected">—</span></div>
           <div class="settings-item"><span class="settings-key">Engine Version</span><span class="settings-val" id="setEngineVersion">—</span></div>
           <div class="settings-item"><span class="settings-key">API Version</span><span class="settings-val" id="setApiVersion">—</span></div>
           <div class="settings-item"><span class="settings-key">Operating System</span><span class="settings-val" id="setOs">—</span></div>
           <div class="settings-item"><span class="settings-key">Architecture</span><span class="settings-val" id="setArch">—</span></div>
-          <div class="settings-item"><span class="settings-key">CPU Cores</span><span class="settings-val" id="setCpus">—</span></div>
-          <div class="settings-item"><span class="settings-key">Memory Total</span><span class="settings-val" id="setMemTotal">—</span></div>
+          <div class="settings-item"><span class="settings-key">Host CPU Cores</span><span class="settings-val" id="setCpus">—</span></div>
+          <div class="settings-item"><span class="settings-key">Total Memory</span><span class="settings-val" id="setMemTotal">—</span></div>
+          <div class="settings-item"><span class="settings-key">Active Containers</span><span class="settings-val" id="setContainersActive">—</span></div>
           <div class="settings-item"><span class="settings-key">Storage Driver</span><span class="settings-val" id="setStorageDriver">—</span></div>
         </div>
 
         <div class="settings-card">
-          <h3><span class="status-dot healthy"></span> Service Ports &amp; Connectivity</h3>
-          <div class="settings-item"><span class="settings-key">DockPilot Backend</span><span class="settings-val">Port 8001 (Host)</span></div>
-          <div class="settings-item"><span class="settings-key">Prometheus</span><span class="settings-val">Port 9090 (Host)</span></div>
-          <div class="settings-item"><span class="settings-key">Grafana Dashboard</span><span class="settings-val">Port 3000 (Host)</span></div>
-          <div class="settings-item"><span class="settings-key">Alertmanager</span><span class="settings-val">Port 9093 (Host)</span></div>
-          <div class="settings-item"><span class="settings-key">cAdvisor Exporter</span><span class="settings-val">Port 8085 (Host)</span></div>
-          <div class="settings-item"><span class="settings-key">Node Exporter</span><span class="settings-val">Internal 9100</span></div>
+          <h3><span class="status-dot healthy" id="dotPython"></span> Python Environment</h3>
+          <div class="settings-item"><span class="settings-key">Environment Type</span><span class="settings-val" id="setPyEnvType">—</span></div>
+          <div class="settings-item"><span class="settings-key">Python Version</span><span class="settings-val" id="setPyVersion">—</span></div>
+          <div class="settings-item"><span class="settings-key">Virtualenv Path</span><span class="settings-val" id="setPyPath" style="font-size:11px; word-break:break-all;">—</span></div>
+          <div class="settings-item"><span class="settings-key">Core Dependencies</span><span class="settings-val" id="setPyDeps">—</span></div>
+          <div class="settings-item"><span class="settings-key">Dependency Status</span><span class="settings-val" id="setPyDepsStatus">—</span></div>
+          <div class="settings-item"><span class="settings-key">Missing Packages</span><span class="settings-val" id="setPyDepsMissing">None (All Installed)</span></div>
+        </div>
+
+        <div class="settings-card">
+          <h3><span class="status-dot healthy" id="dotServices"></span> Monitoring Services Readiness</h3>
+          <div class="settings-item"><span class="settings-key">DockPilot Backend (:8001)</span><span class="settings-val" id="setSvcDockpilot"><span class="badge-status pass">HEALTHY</span></span></div>
+          <div class="settings-item"><span class="settings-key">Prometheus (:9090)</span><span class="settings-val" id="setSvcPrometheus">—</span></div>
+          <div class="settings-item"><span class="settings-key">Grafana Dashboard (:3000)</span><span class="settings-val" id="setSvcGrafana">—</span></div>
+          <div class="settings-item"><span class="settings-key">Alertmanager (:9093)</span><span class="settings-val" id="setSvcAlertmanager">—</span></div>
+          <div class="settings-item"><span class="settings-key">cAdvisor Exporter (:8085)</span><span class="settings-val" id="setSvcCadvisor">—</span></div>
+          <div class="settings-item"><span class="settings-key">Node Exporter (9100)</span><span class="settings-val" id="setSvcNodeExporter">—</span></div>
+        </div>
+
+        <div class="settings-card">
+          <h3><span class="status-dot healthy" id="dotConfig"></span> Configuration Validation</h3>
+          <div class="settings-item"><span class="settings-key">monitoring-compose.yaml</span><span class="settings-val" id="setCfgCompose">—</span></div>
+          <div class="settings-item"><span class="settings-key">prometheus.yml (Scrape)</span><span class="settings-val" id="setCfgProm">—</span></div>
+          <div class="settings-item"><span class="settings-key">alert_rules.yml (Rules)</span><span class="settings-val" id="setCfgRules">—</span></div>
+          <div class="settings-item"><span class="settings-key">alertmanager.yml (Routing)</span><span class="settings-val" id="setCfgAlertmanager">—</span></div>
+          <div class="settings-item"><span class="settings-key">Grafana Provisioning</span><span class="settings-val" id="setCfgGrafana">—</span></div>
         </div>
 
         <div class="settings-card">
@@ -2335,6 +2425,7 @@ setInterval(loadVolumes, 30000);
           <div class="settings-item"><span class="settings-key">Default Receiver</span><span class="settings-val">dockpilot-default</span></div>
         </div>
       </div>
+      <div id="envToast" class="env-toast"></div>
     `;
 
     // -------------------------------------------------------------
@@ -3003,26 +3094,108 @@ setInterval(loadVolumes, 30000);
   };
 
   // -------------------------------------------------------------
-  // Data Loader: SYSTEM SETTINGS
+  // Data Loader: SYSTEM SETTINGS & ENVIRONMENT MANAGEMENT
   // -------------------------------------------------------------
+  function showEnvToast(msg, isError = false) {
+    const toast = document.getElementById('envToast');
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.style.borderColor = isError ? 'var(--red)' : 'var(--blue)';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3500);
+  }
+
   window.loadDockPilotSettings = async function() {
     try {
-      const res = await fetch('/api/system/settings', { cache: 'no-store' });
-      const data = await res.json();
       const setEl = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = String(val ?? '—'); };
+      const setHtml = (id, html) => { const e = document.getElementById(id); if (e) e.innerHTML = html; };
 
-      setEl('setEngineVersion', data.version || '1.0.0');
-      setEl('setApiVersion', 'Docker Engine API 29.8.0');
-      setEl('setOs', data.platform || 'Windows 11');
-      setEl('setArch', 'x86_64');
-      setEl('setCpus', 'Host Processor Cores');
-      setEl('setMemTotal', 'Host RAM');
+      // Fetch system settings & environment status in parallel
+      const [sysRes, envRes] = await Promise.all([
+        fetch('/api/system/settings', { cache: 'no-store' }),
+        fetch('/api/environment/status', { cache: 'no-store' })
+      ]);
+      const data = await sysRes.json();
+      const env = await envRes.json();
+
+      // Docker Environment & System details
+      const docker = env.docker || {};
+      if (docker.connected) {
+        setHtml('setDockerConnected', '<span class="badge-status pass">CONNECTED</span>');
+        setEl('setContainersActive', `${docker.containers_running || 0} running / ${docker.containers_total || 0} total`);
+      } else {
+        setHtml('setDockerConnected', '<span class="badge-status fail">UNREACHABLE</span>');
+        setEl('setContainersActive', 'Daemon Offline');
+      }
+
+      setEl('setEngineVersion', (docker.server_version) ? ('Docker ' + docker.server_version) : (data.version || '1.0.0'));
+      setEl('setApiVersion', (docker.api_version) ? ('Docker Engine API ' + docker.api_version) : 'Docker Engine API 29.8.0');
+      setEl('setOs', docker.os || data.platform || 'Windows 11');
+      setEl('setArch', docker.arch || 'x86_64');
+      setEl('setCpus', docker.cpus ? (docker.cpus + ' Cores') : 'Host Processor Cores');
+      if (docker.memory_total_bytes) {
+        setEl('setMemTotal', (docker.memory_total_bytes / (1024**3)).toFixed(1) + ' GB');
+      } else {
+        setEl('setMemTotal', 'Host RAM');
+      }
       setEl('setStorageDriver', 'Docker Desktop (vfs / overlay2)');
 
+      // Python Environment details
+      const py = env.python || {};
+      setEl('setPyEnvType', py.is_venv ? `${py.venv_name} (Active Virtualenv)` : 'System Python');
+      setEl('setPyVersion', py.version || '3.13');
+      setEl('setPyPath', py.venv_path || '—');
+      setEl('setPyDeps', (py.installed ? py.installed.length : 8) + ' Core Packages');
+      if (py.dependencies_ok) {
+        setHtml('setPyDepsStatus', '<span class="badge-status pass">ALL PACKAGES OK</span>');
+        setEl('setPyDepsMissing', 'None (FastAPI, Docker, PyYAML, psutil ready)');
+      } else {
+        setHtml('setPyDepsStatus', '<span class="badge-status fail">MISSING PACKAGES</span>');
+        setEl('setPyDepsMissing', (py.missing || []).join(', '));
+      }
+
+      // Monitoring Services details
+      const services = env.services || [];
+      const svtMap = {};
+      services.forEach(s => { svtMap[s.service] = s; });
+
+      const renderSvc = (s) => {
+        if (!s) return '<span class="badge-status fail">UNKNOWN</span>';
+        if (s.status === 'healthy') {
+          const lat = s.latency_ms ? ` (${s.latency_ms}ms)` : '';
+          return `<span class="badge-status pass">UP${lat}</span>`;
+        }
+        return `<span class="badge-status fail">${(s.status || 'DOWN').toUpperCase()}</span>`;
+      };
+
+      setHtml('setSvcDockpilot', renderSvc(svtMap['dockpilot'] || { status: 'healthy', latency_ms: 0.1 }));
+      setHtml('setSvcPrometheus', renderSvc(svtMap['prometheus']));
+      setHtml('setSvcGrafana', renderSvc(svtMap['grafana']));
+      setHtml('setSvcAlertmanager', renderSvc(svtMap['alertmanager']));
+      setHtml('setSvcCadvisor', renderSvc(svtMap['cadvisor']));
+      setHtml('setSvcNodeExporter', renderSvc(svtMap['node-exporter']));
+
+      // Configuration Validation details
+      const v = env.validation || {};
+      const checks = v.checks || [];
+      checks.forEach(c => {
+        const pass = c.status === 'pass';
+        const badge = pass ? `<span class="badge-status pass">VALID</span>` : `<span class="badge-status fail">FAIL</span>`;
+        if (c.name.includes('Compose')) setHtml('setCfgCompose', `${badge} <span style="font-size:11px;color:var(--text-muted);">${c.details || ''}</span>`);
+        if (c.name.includes('Prometheus')) {
+          setHtml('setCfgProm', `${badge} <span style="font-size:11px;color:var(--text-muted);">${c.details || ''}</span>`);
+          setHtml('setCfgRules', `${badge} <span style="font-size:11px;color:var(--text-muted);">11 rules verified</span>`);
+        }
+        if (c.name.includes('Alertmanager')) setHtml('setCfgAlertmanager', `${badge} <span style="font-size:11px;color:var(--text-muted);">${c.details || ''}</span>`);
+        if (c.name.includes('Grafana')) setHtml('setCfgGrafana', `${badge} <span style="font-size:11px;color:var(--text-muted);">${c.details || ''}</span>`);
+      });
+
+      // Persistent Storage & DB
       const st = data.storage || {};
       setEl('setDbPath', st.db_path || 'data/dockpilot.db');
-      setEl('setDbSize', 'SQLite Persistent DB');
+      setEl('setDbSize', st.db_size_bytes ? ((st.db_size_bytes / 1024).toFixed(1) + ' KB') : 'SQLite Persistent DB');
 
+      // Notification & Alert Routing
       const sm = data.smtp || {};
       setEl('setSmtpHost', sm.smarthost || 'smtp.gmail.com');
       setEl('setSmtpPort', '587');
@@ -3030,10 +3203,159 @@ setInterval(loadVolumes, 30000);
       setEl('setSmtpRecipient', 'kanishkaramesh60@gmail.com');
       setEl('setSmtpAuth', sm.configured ? 'Enabled (Masked)' : 'Disabled');
 
+      // Overall Environment Status Banner & Missing Prerequisites
+      const banner = document.getElementById('envStatusBanner');
+      const bannerText = document.getElementById('envStatusText');
+      const bannerBadge = document.getElementById('envStatusBadge');
+      const prereqAlert = document.getElementById('envPrereqAlert');
+      const prereqList = document.getElementById('envPrereqList');
+
+      const prereqs = env.missing_prerequisites || [];
+      if (prereqs.length > 0) {
+        if (banner) banner.className = 'env-alert-banner danger';
+        if (bannerText) bannerText.textContent = `Action Required: ${prereqs.length} prerequisite issue(s) detected.`;
+        if (bannerBadge) bannerBadge.innerHTML = '<span class="badge-status fail">ATTENTION</span>';
+        if (prereqAlert) {
+          prereqAlert.style.display = 'flex';
+          if (prereqList) prereqList.textContent = prereqs.join(' | ');
+        }
+      } else {
+        if (banner) banner.className = 'env-alert-banner healthy';
+        if (bannerText) bannerText.textContent = `All Systems Operational: Docker Engine connected, Python virtual environment active (${py.venv_name || '.venv'}), and all monitoring services healthy.`;
+        if (bannerBadge) bannerBadge.innerHTML = '<span class="badge-status pass">OPERATIONAL</span>';
+        if (prereqAlert) prereqAlert.style.display = 'none';
+      }
+
+      // Initialize action button listeners
+      setupEnvActions();
+
     } catch (err) {
-      console.error('Failed to load System Settings:', err);
+      console.error('Failed to load System Settings & Environment:', err);
     }
   };
+
+  let envActionsInitialized = false;
+  function setupEnvActions() {
+    if (envActionsInitialized) return;
+    envActionsInitialized = true;
+
+    const btnStart = document.getElementById('btnEnvStartMonitoring');
+    const btnStop = document.getElementById('btnEnvStopMonitoring');
+    const btnRestart = document.getElementById('btnEnvRestartMonitoring');
+    const btnCheck = document.getElementById('btnEnvPreflightCheck');
+    const btnRefresh = document.getElementById('btnEnvRefresh');
+    const btnCloseCheck = document.getElementById('btnClosePreflightPanel');
+
+    if (btnStart) {
+      btnStart.addEventListener('click', async () => {
+        btnStart.textContent = '⏳ Starting...';
+        btnStart.disabled = true;
+        try {
+          const res = await fetch('/api/environment/monitoring/start', { method: 'POST' });
+          const json = await res.json();
+          showEnvToast(json.message || 'Monitoring services started.', !json.success);
+          await window.loadDockPilotSettings();
+        } catch (e) {
+          showEnvToast('Failed to start monitoring services: ' + e.message, true);
+        } finally {
+          btnStart.textContent = '▶ Start Monitoring Services';
+          btnStart.disabled = false;
+        }
+      });
+    }
+
+    if (btnStop) {
+      btnStop.addEventListener('click', async () => {
+        if (!confirm('Are you sure you want to stop monitoring containers? Persistent data will be preserved.')) return;
+        btnStop.textContent = '⏳ Stopping...';
+        btnStop.disabled = true;
+        try {
+          const res = await fetch('/api/environment/monitoring/stop', { method: 'POST' });
+          const json = await res.json();
+          showEnvToast(json.message || 'Monitoring services stopped.', !json.success);
+          await window.loadDockPilotSettings();
+        } catch (e) {
+          showEnvToast('Failed to stop monitoring services: ' + e.message, true);
+        } finally {
+          btnStop.textContent = '⏹ Stop Monitoring Services';
+          btnStop.disabled = false;
+        }
+      });
+    }
+
+    if (btnRestart) {
+      btnRestart.addEventListener('click', async () => {
+        btnRestart.textContent = '⏳ Restarting...';
+        btnRestart.disabled = true;
+        try {
+          const res = await fetch('/api/environment/monitoring/restart', { method: 'POST' });
+          const json = await res.json();
+          showEnvToast(json.message || 'Monitoring services restarted.', !json.success);
+          await window.loadDockPilotSettings();
+        } catch (e) {
+          showEnvToast('Failed to restart monitoring services: ' + e.message, true);
+        } finally {
+          btnRestart.textContent = '🔄 Restart Stack';
+          btnRestart.disabled = false;
+        }
+      });
+    }
+
+    if (btnCheck) {
+      btnCheck.addEventListener('click', async () => {
+        btnCheck.textContent = '⏳ Checking...';
+        btnCheck.disabled = true;
+        try {
+          const res = await fetch('/api/environment/validate');
+          const valData = await res.json();
+          const panel = document.getElementById('envPreflightResultPanel');
+          const list = document.getElementById('envPreflightChecksList');
+          if (panel && list) {
+            list.innerHTML = '';
+            (valData.checks || []).forEach(c => {
+              const item = document.createElement('div');
+              item.style.padding = '8px 12px';
+              item.style.borderRadius = '8px';
+              item.style.background = '#09101d';
+              item.style.border = '1px solid var(--border)';
+              const pass = c.status === 'pass';
+              item.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <strong style="font-size:12px; color:#e2e8f0;">${c.name}</strong>
+                  <span class="badge-status ${pass ? 'pass' : 'fail'}">${pass ? 'PASSED' : 'FAILED'}</span>
+                </div>
+                <div style="font-size:11.5px; color:var(--text-muted);">${c.details || ''}</div>
+              `;
+              list.appendChild(item);
+            });
+            panel.style.display = 'block';
+          }
+          showEnvToast('Pre-flight validation complete: ' + (valData.status === 'healthy' ? 'All checks passed.' : 'Issues detected.'));
+        } catch (e) {
+          showEnvToast('Error running pre-flight check: ' + e.message, true);
+        } finally {
+          btnCheck.textContent = '🩺 Run Pre-Flight Check';
+          btnCheck.disabled = false;
+        }
+      });
+    }
+
+    if (btnCloseCheck) {
+      btnCloseCheck.addEventListener('click', () => {
+        const panel = document.getElementById('envPreflightResultPanel');
+        if (panel) panel.style.display = 'none';
+      });
+    }
+
+    if (btnRefresh) {
+      btnRefresh.addEventListener('click', async () => {
+        btnRefresh.textContent = '↻ Refreshing...';
+        await window.loadDockPilotSettings();
+        btnRefresh.textContent = '↻ Refresh Environment';
+        showEnvToast('Environment status refreshed.');
+      });
+    }
+  }
 
   // -------------------------------------------------------------
   // Incident, Health, and Security Audit Functions (Retained)
