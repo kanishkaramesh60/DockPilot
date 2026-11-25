@@ -1,20 +1,13 @@
 
-"""
-DockPilot - Automatic Docker Metrics Collector
-
-Collects CPU and memory metrics periodically
-without depending on dashboard requests.
-"""
-
 import logging
 import threading
 import time
 
 from docker.errors import DockerException
 
-from docker_service import get_docker_client
-from metrics_history import record_metrics
-from incident_engine import scan_for_incidents
+from manager.docker_service import get_docker_client
+from manager.metrics_history import record_metrics
+from manager.incident_engine import scan_for_incidents
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 

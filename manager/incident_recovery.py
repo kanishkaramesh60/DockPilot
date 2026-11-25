@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from docker_service import (
+from manager.docker_service import (
     get_docker_client,
     perform_action,
 )

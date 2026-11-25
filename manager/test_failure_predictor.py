@@ -1,5 +1,5 @@
 
-from failure_predictor import analyze_container_history
+from manager.failure_predictor import analyze_container_history
 
 
 def make_history(memory, cpu):

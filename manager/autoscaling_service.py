@@ -1,7 +1,7 @@
 
 """Read real Docker stats for an explicitly selected Compose service."""
 
-from docker_service import get_docker_client
+from manager.docker_service import get_docker_client
 
 
 def get_service_metrics(project_name, service_name):

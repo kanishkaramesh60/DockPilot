@@ -12,12 +12,12 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 from docker.errors import DockerException, NotFound, APIError
 
-from compose_security import (
+from manager.compose_security import (
     ComposeSecurityError,
     analyze_compose_security,
 )
 
-from docker_service import (
+from manager.docker_service import (
     list_containers,
     get_container_details,
     perform_action,
@@ -33,46 +33,46 @@ from docker_service import (
     get_docker_client,
 )
 
-from container_health import (
+from manager.container_health import (
     _inspect_containers,
     check_containers,
     get_recent_health_events,
 )
 
-from security_audit_history import (
+from manager.security_audit_history import (
     initialize_security_audit_history,
     save_security_audit,
     list_security_audits,
     get_security_audit,
 )
 from contextlib import asynccontextmanager
-from metrics_collector import start_metrics_collector, stop_metrics_collector
-from resilience_lab import (
+from manager.metrics_collector import start_metrics_collector, stop_metrics_collector
+from manager.resilience_lab import (
     is_eligible_container,
     validate_experiment_target,
     save_experiment,
     get_experiment_history,
     utc_now,
 )
-from incident_engine import (
+from manager.incident_engine import (
     initialize_incidents,
     scan_for_incidents,
     get_incidents,
 )
-from incident_recovery import (
+from manager.incident_recovery import (
     initialize_recovery,
     create_recommendation,
     execute_approved_recovery,
     get_recovery_history,
 )
 import threading
-from metrics_history import (
+from manager.metrics_history import (
     initialize_history,
     record_metrics,
     get_all_metric_history,
     get_metric_history,
 )
-from failure_predictor import analyze_all_containers
+from manager.failure_predictor import analyze_all_containers
 # --------------------------------------------------
 # REQUEST MODELS
 # --------------------------------------------------

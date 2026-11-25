@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from docker_service import get_docker_client
+from manager.docker_service import get_docker_client
 
 
 DB_PATH = (
