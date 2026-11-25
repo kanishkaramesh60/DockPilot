@@ -1196,7 +1196,7 @@ async function loadContainers() {
 
     const refreshBtn = document.getElementById("refreshBtn");
 
-    refreshBtn.disabled = true;
+    if (refreshBtn) refreshBtn.disabled = true;
 
 
 
@@ -1262,7 +1262,7 @@ async function loadContainers() {
 
     } finally {
 
-        refreshBtn.disabled = false;
+        if (refreshBtn) refreshBtn.disabled = false;
 
     }
 
